@@ -18,8 +18,10 @@ const protect = asyncHandler(async (req, res, next) => {
   // e.g., 'x-mock-user-id'
   const mockUserId = req.headers['x-mock-user-id'];
   
+  console.log('AUTH MIDDLEWARE CALLED with mockUserId:', mockUserId);
   if (mockUserId) {
-    const user = await User.findById(mockUserId);
+    const user = await User.findOne({ firebaseUid: mockUserId });
+    console.log('FOUND USER:', user);
     if (user) {
       req.user = user;
     }

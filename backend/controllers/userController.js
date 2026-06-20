@@ -7,7 +7,7 @@ const User = require('../models/User');
  * @access  Public (or protected by temporary token in real-world)
  */
 const createUser = asyncHandler(async (req, res) => {
-  const { name, email, firebaseUid, gender, heightCm, startWeightKg, targetWeightKg, fitnessLevel, equipmentAccess, daysPerWeek, primaryGoal, dietType } = req.body;
+  const { name, email, firebaseUid } = req.body;
 
   // Basic validation (extend based on exact requirements)
   if (!name || !email || !firebaseUid) {
@@ -15,46 +15,34 @@ const createUser = asyncHandler(async (req, res) => {
     throw new Error('Please provide name, email, and firebaseUid');
   }
 
-  // Check if user already exists
-  const userExists = await User.findOne({ $or: [{ email }, { firebaseUid }] });
-  if (userExists) {
-    res.status(400);
-    throw new Error('User already exists');
+  // 1. Check if user already exists
+  const existingUser = await User.findOne({ firebaseUid });
+  
+  // 2. If yes — this is a re-login, not a new user. Return the existing user with isNewUser: false.
+  if (existingUser) {
+    return res.status(200).json({
+      success: true,
+      message: 'User logged in successfully',
+      data: existingUser,
+      isNewUser: false
+    });
   }
 
-  // AI-calculated defaults (placeholders, replace with actual logic or Claude API)
-  const dailyCalorieTarget = 2000;
-  const dailyProteinTarget = 120;
-  
-  // Set targetDate to 12 weeks from now as default
-  const targetDate = new Date();
-  targetDate.setDate(targetDate.getDate() + (12 * 7));
-
+  // 3. If no — create a new User document with the provided fields. Set onboardingComplete: false.
   const user = await User.create({
     name,
     email,
     firebaseUid,
-    gender,
-    heightCm,
-    startWeightKg,
-    currentWeightKg: startWeightKg,
-    targetWeightKg,
-    targetDate,
-    fitnessLevel,
-    equipmentAccess,
-    daysPerWeek,
-    primaryGoal,
-    dailyCalorieTarget,
-    dailyProteinTarget,
-    dietType,
-    onboardingComplete: true
+    onboardingComplete: false
   });
 
   if (user) {
+    // 4. Return the new user object and isNewUser: true.
     res.status(201).json({
       success: true,
       message: 'User created successfully',
-      data: user
+      data: user,
+      isNewUser: true
     });
   } else {
     res.status(400);
@@ -69,6 +57,7 @@ const createUser = asyncHandler(async (req, res) => {
  */
 const getUserProfile = asyncHandler(async (req, res) => {
   // Uses req.user set by authMiddleware
+  console.log('DEBUG req.user:', req.user);
   const user = await User.findById(req.user._id);
 
   if (user) {
@@ -94,7 +83,6 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   if (user) {
     user.name = req.body.name || user.name;
     user.gender = req.body.gender || user.gender;
-    user.profilePhotoUrl = req.body.profilePhotoUrl || user.profilePhotoUrl;
     user.dietType = req.body.dietType || user.dietType;
     user.equipmentAccess = req.body.equipmentAccess || user.equipmentAccess;
     
