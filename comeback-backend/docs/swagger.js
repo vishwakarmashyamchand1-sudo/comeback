@@ -30,6 +30,8 @@ const options = {
       '/api/onboarding/profile': { patch: { tags: ['Onboarding'], summary: 'Save onboarding step', responses: { 200: { description: 'Updated' } } } },
       '/api/onboarding/complete': { post: { tags: ['Onboarding'], summary: 'Generate Week 1 plan', responses: { 200: { description: 'Completed' } } } },
 
+      '/api/workouts': { post: { tags: ['Workouts'], summary: 'Create a new workout', responses: { 201: { description: 'Created' } } } },
+
       '/api/workouts/today': { get: { tags: ['Workouts'], summary: 'Get today workout', responses: { 200: { description: 'Success' } } } },
       '/api/workouts/{id}/log-set': { patch: { tags: ['Workouts'], summary: 'Log a set', parameters: [{name: 'id', in: 'path', required: true, schema: {type: 'string'}}], responses: { 200: { description: 'Success' } } } },
       '/api/workouts/{id}/skip-exercise': { patch: { tags: ['Workouts'], summary: 'Skip an exercise', parameters: [{name: 'id', in: 'path', required: true, schema: {type: 'string'}}], responses: { 200: { description: 'Success' } } } },

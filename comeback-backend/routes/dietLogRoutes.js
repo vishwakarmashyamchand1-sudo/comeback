@@ -7,7 +7,6 @@ const {
   getTodayDiet,
   getDietHistory,
   getDietSummary,
-  storePhoto,
   updateWater,
   getDietTip
 } = require('../controllers/dietLogController');
@@ -32,9 +31,6 @@ router.get('/history', getDietHistory);
 
 // 6. GET /api/diet/summary
 router.get('/summary', getDietSummary);
-
-// 7. POST /api/diet/photo
-router.post('/photo', storePhoto);
 
 // 8. PATCH /api/diet/water
 router.patch('/water', updateWater);

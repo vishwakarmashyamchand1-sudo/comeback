@@ -56,7 +56,7 @@ const WorkoutSchema = new mongoose.Schema({
   // ── Plan Source ──────────────────────────────
   planSource: {
     type: String,
-    enum: ['ai_generated', 'user_modified', 'muscle_swap'],
+    enum: ['ai_generated', 'user_modified', 'muscle_swap', 'coach_chat'],
     default: 'ai_generated'
   },
 

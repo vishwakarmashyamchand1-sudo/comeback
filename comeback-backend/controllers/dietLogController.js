@@ -43,7 +43,7 @@ const recalculateDailyTotals = (dietLog) => {
  * @access  Private
  */
 const addMeal = asyncHandler(async (req, res) => {
-  const { date, mealType, items, photoUrl } = req.body;
+  const { date, mealType, items, aiTip } = req.body;
 
   if (!mealType || !items || !Array.isArray(items)) {
     res.status(400);
@@ -78,7 +78,7 @@ const addMeal = asyncHandler(async (req, res) => {
 
   const newMeal = {
     mealType,
-    photoUrl,
+    aiTip,
     items: formattedItems,
     loggedAt: new Date()
   };
@@ -103,7 +103,7 @@ const addMeal = asyncHandler(async (req, res) => {
  */
 const updateMeal = asyncHandler(async (req, res) => {
   const { mealId } = req.params;
-  const { mealType, items, photoUrl } = req.body;
+  const { mealType, items, aiTip } = req.body;
 
   const dietLog = await DietLog.findOne({ 'meals._id': mealId, userId: req.user._id });
 
@@ -116,7 +116,7 @@ const updateMeal = asyncHandler(async (req, res) => {
   
   if (mealIndex !== -1) {
     if (mealType) dietLog.meals[mealIndex].mealType = mealType;
-    if (photoUrl !== undefined) dietLog.meals[mealIndex].photoUrl = photoUrl;
+    if (aiTip !== undefined) dietLog.meals[mealIndex].aiTip = aiTip;
     
     if (items && Array.isArray(items)) {
       dietLog.meals[mealIndex].items = items.map(item => ({
@@ -266,30 +266,6 @@ const getDietSummary = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    7. Placeholder for photo URL storage (future R2 setup)
- * @route   POST /api/diet/photo
- * @access  Private
- */
-const storePhoto = asyncHandler(async (req, res) => {
-  const { photoUrl } = req.body;
-
-  if (!photoUrl) {
-    res.status(400);
-    throw new Error('Please provide photoUrl');
-  }
-
-  // Placeholder logic: just echo it back. 
-  // In the future this will be linked to Cloudflare R2 direct uploads and Claude parsing
-  res.status(200).json({
-    success: true,
-    data: {
-      photoUrl,
-      message: 'Photo URL stored. AI parsing disabled for now.'
-    }
-  });
-});
-
-/**
  * @desc    Update water count
  * @route   PATCH /api/diet/water
  * @access  Private
@@ -345,7 +321,6 @@ module.exports = {
   getTodayDiet,
   getDietHistory,
   getDietSummary,
-  storePhoto,
   updateWater,
   getDietTip
 };

@@ -1,41 +1,57 @@
 const asyncHandler = require('express-async-handler');
-const auth = require('../config/firebase');
+const adminAuth = require('../config/firebase');
+const User = require('../models/User');
 
+/**
+ * Auth Middleware
+ * Verifies the Firebase JWT token from the Authorization header.
+ * Attaches the authenticated user to `req.user`.
+ */
 const protect = asyncHandler(async (req, res, next) => {
-   // --- POSTMAN CHEAT CODE ---
-  if (req.headers['x-postman-bypass']) {
-    // Blindly trust whatever UID we type in Postman!
-    req.user = { uid: req.headers['x-postman-bypass'] }; 
-    return next();
-  }
-  // --------------------------
-
   let token;
 
-  // 1. Check if the frontend sent a Bearer token in the headers
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
-      // 2. Extract just the token part
+      // 1. Get token from header
       token = req.headers.authorization.split(' ')[1];
 
-      // 3. Ask Google Firebase to verify if this token is real
-      const decodedToken = await auth.verifyIdToken(token);
-
-      // 4. Google says it's real! Attach the decoded user
-      req.user = decodedToken;
+      // 2. Verify token with Firebase Admin
+      const decodedToken = await adminAuth.verifyIdToken(token);
       
-      next(); // Let them pass!
+      // 3. Find user in database by firebaseUid
+      const user = await User.findOne({ firebaseUid: decodedToken.uid });
+
+      if (user) {
+        req.user = user;
+        return next();
+      } else {
+        // If the token is valid but user isn't in DB yet (e.g. during registration)
+        // Attach the uid so the controller can use it
+        req.user = { firebaseUid: decodedToken.uid };
+        return next();
+      }
     } catch (error) {
-      console.error('Firebase Token Error:', error);
+      console.error('❌ Firebase Auth Error:', error.message);
       res.status(401);
-      throw new Error('Not authorized, invalid token');
+      throw new Error('Not authorized, token failed');
     }
   }
 
-  // 5. If they tried to enter without sending a token at all
-  if (!token) {
+  // Fallback for Postman testing (Mock User ID)
+  // This allows you to continue testing without a real frontend app
+  const mockUserId = req.headers['x-mock-user-id'];
+  if (mockUserId) {
+    console.warn('⚠️ WARNING: Using mock authentication. Do not use in production.');
+    const user = await User.findOne({ firebaseUid: mockUserId });
+    if (user) {
+      req.user = user;
+      return next();
+    }
+  }
+
+  if (!token && !mockUserId) {
     res.status(401);
-    throw new Error('Not authorized, no valid token found');
+    throw new Error('Not authorized, no token provided');
   }
 });
 

@@ -17,14 +17,13 @@ const FoodItemSchema = new mongoose.Schema({
 const MealSchema = new mongoose.Schema({
   mealType:   { type: String, enum: ['breakfast','lunch','snack','dinner'], required: true },
   loggedAt:   { type: Date, default: Date.now },
-  photoUrl:   { type: String },   // Cloudflare R2 URL of the food photo
   items:      [FoodItemSchema],   // AI-detected and user-confirmed items
   totalCalories: { type: Number, default: 0 },
   totalProteinG: { type: Number, default: 0 },
   totalCarbsG:   { type: Number, default: 0 },
   totalFatG:     { type: Number, default: 0 },
   aiTip:      { type: String },   // one-line tip Claude gave after this meal
-}, { _id: false });
+});
 
 // Main DietLog document
 const DietLogSchema = new mongoose.Schema({

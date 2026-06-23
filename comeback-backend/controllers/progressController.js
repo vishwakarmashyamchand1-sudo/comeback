@@ -1,7 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const Workout = require('../models/Workout');
-const DietLog = require('../models/DietLog');
 const Metric = require('../models/Metrics');
+const WeeklySummary = require('../models/WeeklySummarize');
 
 /**
  * @desc    Get holistic progress dashboard (Phase 8)
@@ -11,14 +11,29 @@ const Metric = require('../models/Metrics');
 const getProgressDashboard = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
-  // 1. Total Workouts & Completion Percentage
-  const totalWorkouts = await Workout.countDocuments({ userId });
-  const completedWorkouts = await Workout.countDocuments({ userId, status: 'completed' });
-  const completionPercentage = totalWorkouts > 0 ? ((completedWorkouts / totalWorkouts) * 100).toFixed(2) : 0;
+  // 122. Query Metric documents for this user, sorted by weekNumber
+  const metrics = await Metric.find({ userId }).sort({ weekNumber: 1 });
 
-  // 2. Workout Streak (simplified logic)
+  // 123. Extract histories
+  const weightHistory = metrics.map(m => ({ weekNumber: m.weekNumber, weightKg: m.weightKg, date: m.recordedAt }));
+  const weeklySessionCounts = metrics.map(m => ({ weekNumber: m.weekNumber, count: m.sessionsCompleted }));
+  const weeklyProteinAvgs = metrics.map(m => ({ weekNumber: m.weekNumber, avgProteinG: m.avgDailyProteinG }));
+
+  // 124. Get the most recent WeeklySummary and extract patternInsights
+  const recentSummary = await WeeklySummary.findOne({ userId }).sort({ weekNumber: -1 });
+  const patternInsights = recentSummary ? recentSummary.patternInsights : [];
+
+  // 125. Query all Metric documents for milestonesEarned — flatten into a single array
+  let milestones = [];
+  metrics.forEach(m => {
+    if (m.milestonesEarned && m.milestonesEarned.length > 0) {
+      milestones = milestones.concat(m.milestonesEarned);
+    }
+  });
+
+  // 126. Calculate currentStreak from Workout documents
   const allCompleted = await Workout.find({ userId, status: 'completed' }).sort({ date: -1 }).select('date');
-  let streak = 0;
+  let currentStreak = 0;
   if (allCompleted.length > 0) {
     let expectedDate = new Date();
     expectedDate.setUTCHours(0,0,0,0);
@@ -27,48 +42,32 @@ const getProgressDashboard = asyncHandler(async (req, res) => {
     
     // Valid streak if last workout was today or yesterday
     if (Math.abs(expectedDate - lastWorkoutDate) <= (1000 * 60 * 60 * 24)) {
-      streak = 1;
+      currentStreak = 1;
       let curr = new Date(lastWorkoutDate);
       for (let i = 1; i < allCompleted.length; i++) {
         let prev = new Date(allCompleted[i].date);
         prev.setUTCHours(0,0,0,0);
         curr.setDate(curr.getDate() - 1);
-        if (prev.getTime() === curr.getTime()) streak++;
+        if (prev.getTime() === curr.getTime()) currentStreak++;
         else break;
       }
     }
   }
 
-  // 3. Weight Trend (last 10 metrics)
-  const metrics = await Metric.find({ userId }).sort({ weekNumber: 1 }).limit(10).select('weekNumber weightKg');
-  const weightTrend = metrics.map(m => ({ week: m.weekNumber, weight: m.weightKg }));
+  // Calculate totalSessionsCompleted
+  const totalSessionsCompleted = allCompleted.length;
 
-  // 4. Total Calories & Average Protein (last 7 days average)
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  sevenDaysAgo.setUTCHours(0,0,0,0);
-  
-  const dietLogs = await DietLog.find({ userId, date: { $gte: sevenDaysAgo } });
-  
-  let totalCalories7d = 0;
-  let totalProtein7d = 0;
-  
-  dietLogs.forEach(log => {
-    totalCalories7d += log.totalCalories || 0;
-    totalProtein7d += log.totalProteinG || 0;
-  });
-
-  const avgProtein = dietLogs.length > 0 ? (totalProtein7d / dietLogs.length).toFixed(2) : 0;
-
+  // 127. Return everything in a single response
   res.status(200).json({
     success: true,
     data: {
-      totalWorkouts,
-      completionPercentage: `${completionPercentage}%`,
-      streak,
-      weightTrend,
-      totalCalories7d,
-      avgProtein7d: parseFloat(avgProtein)
+      weightHistory,
+      weeklySessionCounts,
+      weeklyProteinAvgs,
+      currentStreak,
+      totalSessionsCompleted,
+      patternInsights,
+      milestones
     }
   });
 });
