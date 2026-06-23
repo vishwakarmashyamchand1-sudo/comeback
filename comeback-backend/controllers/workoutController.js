@@ -49,59 +49,155 @@ const createWorkout = asyncHandler(async (req, res) => {
  * @access  Private
  */
 const getTodayWorkout = asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
+
+  // Step 26: Get today's date (midnight to midnight)
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
-  const workout = await Workout.findOne({
-    userId: req.user._id,
-    date: today
-  }).populate('exercises.exerciseId', 'name equipment targetMuscle gifUrl');
-
-  if (!workout) {
+  // --- THE FIX: We have to find the Mongo User FIRST using Firebase UID! ---
+  const user = await User.findOne({ firebaseUid: req.user.uid });
+  if (!user) {
     res.status(404);
-    throw new Error('No workout found for today');
+    throw new Error('User not found');
   }
 
-  res.status(200).json({
-    success: true,
-    data: workout
-  });
+  // Fetch the last completed session for context display (Requirement in JSON Response)
+  const lastWorkout = await Workout.findOne({ 
+    userId: user._id, 
+    status: 'completed' 
+  }).sort({ date: -1 });
+
+  const previousSession = lastWorkout ? {
+    date: lastWorkout.date,
+    sessionType: lastWorkout.sessionType,
+    sessionDurationMins: lastWorkout.sessionDurationMins
+  } : null;
+
+  // Step 27: Find the Workout document for this userId + today's date
+  // Step 30: Populate exercise details (gifUrl, whyLabel)
+  const workout = await Workout.findOne({
+    userId: user._id,
+    date: today
+  }).populate('exercises.exerciseId', 'name equipment targetMuscle gifUrl whyLabel');
+
+  if (workout) {
+    // Step 31: Return the workout document with populated data
+    return res.status(200).json({
+      workout: workout,
+      isRestDay: false,
+      previousSession: previousSession
+    });
+  }
+
+  // Step 28: If no workout found, check if today is a rest day in the weekly split
+  const todayIndex = new Date().getDay(); // JavaScript gets day as 0 (Sun) to 6 (Sat)
+  
+  let isRestDay = false;
+  if (user && user.weeklyPlanSplit && user.weeklyPlanSplit.length > 0) {
+    const splitForToday = user.weeklyPlanSplit[todayIndex % user.weeklyPlanSplit.length];
+    if (splitForToday && splitForToday.toLowerCase() === 'rest') {
+      isRestDay = true;
+    }
+  }
+
+  // Step 29: If rest day, return safely without crashing
+  if (isRestDay) {
+    return res.status(200).json({
+      workout: null,
+      isRestDay: true,
+      previousSession: previousSession
+    });
+  }
+
+  // 404 Error: Frontend will show "Contact your coach" prompt
+  res.status(404);
+  throw new Error('No workout planned for today');
 });
 
 /**
- * @desc    3. Get workout history with pagination
+ * @desc    3. Get workout history for calendar view
  * @route   GET /api/workouts/history
  * @access  Private
  */
 const getWorkoutHistory = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-  const skip = (page - 1) * limit;
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
+  const Metric = require('../models/Metrics'); // Need metrics to pull the PRs
 
-  // History usually implies completed or skipped workouts
-  const filter = { 
-    userId: req.user._id, 
-    status: { $in: ['completed', 'skipped'] } 
-  };
+  // 1. Securely fetch User via Firebase Token
+  const user = await User.findOne({ firebaseUid: req.user.uid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
 
-  const workouts = await Workout.find(filter)
-    .sort({ date: -1 })
-    .skip(skip)
-    .limit(limit);
+  // Step 65 & 66: Query completed workouts and sort descending
+  const workouts = await Workout.find({ 
+    userId: user._id, 
+    status: 'completed' 
+  }).sort({ date: -1 });
 
-  const total = await Workout.countDocuments(filter);
+  // Fetch all metrics to find PRs for Step 67
+  const metrics = await Metric.find({ userId: user._id });
+  let allPRs = [];
+  metrics.forEach(m => {
+    if (m.newPRs) allPRs.push(...m.newPRs);
+  });
 
+  // Step 67: Map into clean summaries
+  const sessions = workouts.map(w => {
+    // Find PRs that happened on the same day as this workout
+    const workoutPRs = allPRs.filter(pr => {
+      if (!pr.achievedAt) return false;
+      const prDate = new Date(pr.achievedAt);
+      const wDate = new Date(w.date);
+      return prDate.toDateString() === wDate.toDateString();
+    });
+
+    return {
+      date: w.date,
+      sessionType: w.sessionType,
+      sessionRating: w.sessionRating || null,
+      sessionFeel: w.sessionFeel || null,
+      exercisesCount: w.exercises.length,
+      newPRs: workoutPRs
+    };
+  });
+
+  // Step 68: Calculate current streak
+  const completedDates = workouts.map(w => {
+    const d = new Date(w.date);
+    d.setHours(0, 0, 0, 0); // Normalize to midnight
+    return d.getTime();
+  });
+
+  const uniqueDates = [...new Set(completedDates)];
+  
+  let currentStreak = 0;
+  let today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  let checkDate = today;
+
+  // Generous Streak Logic: If they haven't worked out today, but worked out yesterday, start counting from yesterday so they don't lose their streak!
+  if (!uniqueDates.includes(today.getTime()) && uniqueDates.includes(yesterday.getTime())) {
+    checkDate = yesterday;
+  }
+
+  while (uniqueDates.includes(checkDate.getTime())) {
+    currentStreak++;
+    checkDate.setDate(checkDate.getDate() - 1); // Go back one day
+  }
+
+  // Step 69: Return JSON array
   res.status(200).json({
-    success: true,
-    data: {
-      workouts,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-      }
-    }
+    sessions: sessions,
+    currentStreak: currentStreak
   });
 });
 
@@ -191,84 +287,109 @@ const getWorkoutById = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    5. Log actualReps and actualWeight for a specific set
+ * @desc    5. Log actualReps and actualWeight for a specific set in real time
  * @route   PATCH /api/workouts/:id/log-set
  * @access  Private
  */
 const logSet = asyncHandler(async (req, res) => {
-  const { exerciseId, setNumber, actualReps, actualWeight } = req.body;
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
 
-  if (!exerciseId || setNumber === undefined || actualReps === undefined || actualWeight === undefined) {
+  // Read the exact fields the Sir requested
+  const { exerciseIndex, setIndex, actualReps, actualWeight, completed } = req.body;
+
+  if (exerciseIndex === undefined || setIndex === undefined) {
     res.status(400);
-    throw new Error('Please provide exerciseId, setNumber, actualReps, and actualWeight');
+    throw new Error('exerciseIndex and setIndex are required');
   }
 
-  const workout = await Workout.findOne({ _id: req.params.id, userId: req.user._id });
-
-  if (!workout) {
+  // 1. Securely fetch User using Firebase token
+  const user = await User.findOne({ firebaseUid: req.user.uid });
+  if (!user) {
     res.status(404);
+    throw new Error('User not found');
+  }
+
+  // Step 32: Find the Workout document securely
+  const workout = await Workout.findOne({ _id: req.params.id, userId: user._id });
+  if (!workout) {
+    res.status(404); // Matches Red 404 Error
     throw new Error('Workout not found');
   }
 
-  // Find the exercise in the workout
-  const exerciseIndex = workout.exercises.findIndex(e => e.exerciseId.toString() === exerciseId);
-  if (exerciseIndex === -1) {
-    res.status(404);
-    throw new Error('Exercise not found in this workout');
+  // Safety Check: Make sure the indexes the frontend sent actually exist!
+  if (!workout.exercises[exerciseIndex] || !workout.exercises[exerciseIndex].sets[setIndex]) {
+    res.status(400); // Matches Red 400 Error
+    throw new Error('Invalid exerciseIndex or setIndex');
   }
 
-  // Find the set
-  const setIndex = workout.exercises[exerciseIndex].sets.findIndex(s => s.setNumber === setNumber);
-  if (setIndex === -1) {
-    res.status(404);
-    throw new Error('Set number not found');
-  }
+  // Step 33 & 34: Update ONLY the fields provided without touching planned values
+  const targetSet = workout.exercises[exerciseIndex].sets[setIndex];
+  
+  if (actualReps !== undefined) targetSet.actualReps = actualReps;
+  if (actualWeight !== undefined) targetSet.actualWeight = actualWeight;
+  if (completed !== undefined) targetSet.completed = completed;
 
-  // Update actuals and mark completed
-  workout.exercises[exerciseIndex].sets[setIndex].actualReps = actualReps;
-  workout.exercises[exerciseIndex].sets[setIndex].actualWeight = actualWeight;
-  workout.exercises[exerciseIndex].sets[setIndex].completed = true;
-
-  // Change workout status to in_progress if it was planned
+  // Step 35: If workout status is still "planned", update to "in_progress"
   if (workout.status === 'planned') {
     workout.status = 'in_progress';
   }
 
+  // Save changes to database lightning fast
   await workout.save();
 
+  // Step 36: Return the exact JSON structure requested
   res.status(200).json({
     success: true,
-    data: workout.exercises[exerciseIndex].sets[setIndex]
+    updatedSet: targetSet
   });
 });
-
 /**
  * @desc    6. Add a user-selected exercise to the workout
- * @route   PATCH /api/workouts/:id/add-exercise
+ * @route   POST /api/workouts/:id/add-exercise
  * @access  Private
  */
 const addExercise = asyncHandler(async (req, res) => {
-  const { exerciseId, sets } = req.body; // sets is an array of planned sets
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
+  const Exercise = require('../models/Exercise');
+
+  const { exerciseId, sets } = req.body; 
 
   if (!exerciseId || !sets || !Array.isArray(sets)) {
     res.status(400);
     throw new Error('Please provide exerciseId and an array of sets');
   }
 
-  const workout = await Workout.findOne({ _id: req.params.id, userId: req.user._id });
+  // 1. Securely find the user via Firebase Token
+  const user = await User.findOne({ firebaseUid: req.user.uid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  // 2. Find the specific workout
+  const workout = await Workout.findOne({ _id: req.params.id, userId: user._id });
   if (!workout) {
     res.status(404);
     throw new Error('Workout not found');
   }
 
-  // 3. exerciseName should be denormalized
+  // Step 41: Fetch the Exercise document from the master library
   const exerciseDetails = await Exercise.findById(exerciseId);
   if (!exerciseDetails) {
-    res.status(404);
-    throw new Error('Exercise not found in database');
+    res.status(404); // Matches the Red 404 Error in the Sir's doc
+    throw new Error('Exercise not found in master library');
   }
 
-  // 4. addedByUser flag must be supported
+  // Step 42: Duplicate check (Avoid adding the same exercise twice)
+  const isDuplicate = workout.exercises.some(e => e.exerciseId.toString() === exerciseId);
+  if (isDuplicate) {
+    res.status(409); // Matches the Red 409 Error in the Sir's doc
+    throw new Error('Exercise already in today\'s workout');
+  }
+
+  // Step 43 & 44: Append the new exercise to the workout array
   const newWorkoutExercise = {
     exerciseId: exerciseDetails._id,
     exerciseName: exerciseDetails.name,
@@ -287,87 +408,205 @@ const addExercise = asyncHandler(async (req, res) => {
 
   await workout.save();
 
+  // Step 45: Return the updated workout
   res.status(200).json({
-    success: true,
-    data: newWorkoutExercise
+    workout: workout
   });
 });
 
 /**
- * @desc    7. Skip an exercise (Call 05)
+ * @desc    7. Mark an exercise as skipped
  * @route   PATCH /api/workouts/:id/skip-exercise
  * @access  Private
  */
 const skipExercise = asyncHandler(async (req, res) => {
-  const { exerciseId, skipReason } = req.body;
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
 
-  if (!exerciseId) {
+  // Read exactly what the Sir requested from the frontend
+  const { exerciseIndex, skipReason } = req.body;
+
+  if (exerciseIndex === undefined) {
     res.status(400);
-    throw new Error('Please provide exerciseId');
+    throw new Error('exerciseIndex is required');
   }
 
-  const workout = await Workout.findOne({ _id: req.params.id, userId: req.user._id });
+  // Securely find User via Firebase Token
+  const user = await User.findOne({ firebaseUid: req.user.uid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  // Step 37: Find the Workout document securely
+  const workout = await Workout.findOne({ _id: req.params.id, userId: user._id });
   if (!workout) {
     res.status(404);
     throw new Error('Workout not found');
   }
 
-  const exerciseIndex = workout.exercises.findIndex(e => e.exerciseId.toString() === exerciseId);
-  if (exerciseIndex === -1) {
-    res.status(404);
-    throw new Error('Exercise not found in this workout');
+  // Safety Check: Prevent array crashes
+  if (!workout.exercises[exerciseIndex]) {
+    res.status(400);
+    throw new Error('Invalid exerciseIndex');
   }
 
+  // Step 38: Set wasSkipped = true and skipReason if provided
   workout.exercises[exerciseIndex].wasSkipped = true;
-  if (skipReason) {
+  if (skipReason !== undefined) {
     workout.exercises[exerciseIndex].skipReason = skipReason;
   }
 
-  workout.planSource = 'user_modified';
+  // Step 39: We call .save() without deleting the exercise from the array!
   await workout.save();
 
+  // Step 40: Return updated exercise exactly as requested
   res.status(200).json({
     success: true,
-    data: { message: 'Exercise marked as skipped successfully' }
+    updatedExercise: workout.exercises[exerciseIndex]
   });
 });
 
 /**
- * @desc    Swap muscle group for tomorrow's plan (Call 04 placeholder)
+ * @desc    Generate an alternative plan for tomorrow based on a new muscle group
  * @route   POST /api/workouts/tomorrow/swap-muscle
  * @access  Private
  */
 const swapMuscle = asyncHandler(async (req, res) => {
-  const { targetMuscle, replacementMuscle } = req.body;
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
 
+  const { muscleGroup, currentPlanId } = req.body;
+
+  if (!muscleGroup || !currentPlanId) {
+    res.status(400);
+    throw new Error('Please provide muscleGroup and currentPlanId');
+  }
+
+  // 1. Fetch User Securely
+  const user = await User.findOne({ firebaseUid: req.user.uid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  // 2. Step 54 & 55: Check if the muscle was trained in the last 48 hours to protect the user
+  const twoDaysAgo = new Date();
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+  const recentWorkout = await Workout.findOne({
+    userId: user._id,
+    status: 'completed',
+    date: { $gte: twoDaysAgo },
+    sessionType: { $regex: new RegExp(muscleGroup, 'i') } // Checks if muscle name is in the sessionType
+  });
+
+  let recoveryWarning = null;
+  if (recentWorkout) {
+    recoveryWarning = `You just trained ${muscleGroup} recently. Are you sure you are fully recovered?`;
+  }
+
+  // 3. Step 56, 57, 58: Generate Preview Plan (Simulating Claude AI)
+  // We generate a fake plan in memory, but we DO NOT save it to the database yet!
+  const previewPlan = {
+    _id: "PREVIEW_ONLY_NOT_SAVED_YET",
+    sessionType: muscleGroup,
+    status: "planned",
+    planSource: "muscle_swap",
+    exercises: [
+      {
+        exerciseName: `AI Generated ${muscleGroup} Exercise 1`,
+        muscleGroup: muscleGroup,
+        sets: [
+          { setNumber: 1, plannedReps: 12, plannedWeight: 20 },
+          { setNumber: 2, plannedReps: 10, plannedWeight: 25 }
+        ]
+      }
+    ]
+  };
+
+  // 4. Return the preview to the frontend exactly as the Sir requested
   res.status(200).json({
-    success: true,
-    message: `Swapped ${targetMuscle} for ${replacementMuscle} in tomorrow's plan (Placeholder)`
+    newPlan: previewPlan,
+    recoveryWarning: recoveryWarning
   });
 });
 
 /**
- * @desc    Confirm tomorrow's plan
+ * @desc    Confirm and save a modified tomorrow plan
  * @route   PATCH /api/workouts/:id/confirm
  * @access  Private
  */
 const confirmPlan = asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
+
+  // Read exactly what the Sir requested from the frontend
+  const { exercises, planSource } = req.body;
+
+  if (!exercises || !planSource) {
+    res.status(400);
+    throw new Error('Please provide exercises array and planSource');
+  }
+
+  // 1. Securely fetch User via Firebase Token
+  const user = await User.findOne({ firebaseUid: req.user.uid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  // Step 60: Find tomorrow's Workout document securely
+  const workout = await Workout.findOne({ _id: req.params.id, userId: user._id });
+  if (!workout) {
+    res.status(404);
+    throw new Error('Workout not found');
+  }
+
+  // Step 61: Replace the old exercises array with the new confirmed plan!
+  workout.exercises = exercises;
+  
+  // Step 62: Set planSource to "muscle_swap" or "coach_chat"
+  workout.planSource = planSource;
+  
+  // Step 63: Set status back to "planned"
+  workout.status = 'planned';
+
+  // Save the massive override to the database
+  await workout.save();
+
+  // Step 64: Return the saved workout exactly as requested
   res.status(200).json({
-    success: true,
-    message: 'Plan confirmed successfully (Placeholder)'
+    workout: workout
   });
 });
 
 /**
- * @desc    8. Mark workout complete
+ * @desc    8. Mark session complete — triggers AI summary + tomorrow's plan
  * @route   POST /api/workouts/:id/complete
  * @access  Private
  */
 const completeWorkout = asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
+  const Metric = require('../models/Metrics'); // We need the Metric model for Step 52
+
   const { sessionRating, sessionFeel, sessionDurationMins } = req.body;
 
-  const workout = await Workout.findOne({ _id: req.params.id, userId: req.user._id });
+  if (!sessionRating || !sessionFeel) {
+    res.status(400);
+    throw new Error('Please provide sessionRating and sessionFeel');
+  }
 
+  // 1. Fetch User securely via Firebase Token
+  const user = await User.findOne({ firebaseUid: req.user.uid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  // 2. Step 32: Find the Workout document
+  const workout = await Workout.findOne({ _id: req.params.id, userId: user._id });
   if (!workout) {
     res.status(404);
     throw new Error('Workout not found');
@@ -378,24 +617,105 @@ const completeWorkout = asyncHandler(async (req, res) => {
     throw new Error('Workout is already completed');
   }
 
+  // 3. Step 46: Update the Workout document immediately
   workout.status = 'completed';
-  if (sessionRating) workout.sessionRating = sessionRating;
-  if (sessionFeel) workout.sessionFeel = sessionFeel;
-  if (sessionDurationMins) workout.sessionDurationMins = sessionDurationMins;
-
-  // The schema doesn't have an explicit 'completedAt' field, but 'updatedAt' is handled by timestamps.
-  // We can add logic to compute duration if needed.
+  workout.sessionRating = sessionRating;
+  workout.sessionFeel = sessionFeel;
+  if (sessionDurationMins) {
+    workout.sessionDurationMins = sessionDurationMins;
+  }
   
+  // Important Note: Save completion data to DB immediately so user doesn't wait for Claude
   await workout.save();
 
-  res.status(200).json({
-    success: true,
-    data: {
-      status: workout.status,
-      sessionRating: workout.sessionRating,
-      sessionFeel: workout.sessionFeel,
-      sessionDurationMins: workout.sessionDurationMins
+  // 4. Step 47: Detect Personal Records
+  const newPRs = [];
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  // Fetch all completed workouts from the last 30 days
+  const pastWorkouts = await Workout.find({
+    userId: user._id,
+    status: 'completed',
+    date: { $gte: thirtyDaysAgo, $lt: workout.date }
+  });
+
+  // Loop through today's exercises
+  workout.exercises.forEach(exercise => {
+    let maxTodayVolume = 0;
+    
+    // Calculate best set from today
+    exercise.sets.forEach(set => {
+      if (set.completed && set.actualWeight && set.actualReps) {
+        const volume = set.actualWeight * set.actualReps;
+        if (volume > maxTodayVolume) maxTodayVolume = volume;
+      }
+    });
+
+    if (maxTodayVolume > 0) {
+      let maxPastVolume = 0;
+      let pastBestString = "0kg x 0 reps";
+
+      // Look through past workouts for this exact exercise
+      pastWorkouts.forEach(pastWk => {
+        const pastEx = pastWk.exercises.find(e => e.exerciseName === exercise.exerciseName);
+        if (pastEx) {
+          pastEx.sets.forEach(pastSet => {
+            if (pastSet.completed && pastSet.actualWeight && pastSet.actualReps) {
+              const pVolume = pastSet.actualWeight * pastSet.actualReps;
+              if (pVolume > maxPastVolume) {
+                maxPastVolume = pVolume;
+                pastBestString = `${pastSet.actualWeight}kg x ${pastSet.actualReps} reps`;
+              }
+            }
+          });
+        }
+      });
+
+      // If today's volume beats the past 30 days maximum, it's a new PR!
+      if (maxTodayVolume > maxPastVolume) {
+        // Find exactly which set triggered the PR for the string
+        const bestSet = exercise.sets.find(s => s.completed && (s.actualWeight * s.actualReps) === maxTodayVolume);
+        
+        newPRs.push({
+          exerciseName: exercise.exerciseName,
+          previousBest: maxPastVolume === 0 ? "First time logging!" : pastBestString,
+          newBest: `${bestSet.actualWeight}kg x ${bestSet.actualReps} reps`,
+          achievedAt: new Date()
+        });
+      }
     }
+  });
+
+  // 5. Step 52: Update Metric document for this week
+  let metric = await Metric.findOne({ userId: user._id, weekNumber: user.currentWeekNumber });
+  
+  if (!metric) {
+    // If no metric document exists for this week yet, create one
+    metric = new Metric({
+      userId: user._id,
+      weekNumber: user.currentWeekNumber || 1,
+      sessionsCompleted: 1,
+      newPRs: newPRs
+    });
+  } else {
+    // If it exists, increment and append
+    metric.sessionsCompleted += 1;
+    if (newPRs.length > 0) {
+      metric.newPRs.push(...newPRs);
+    }
+  }
+  await metric.save();
+
+  // 6. Steps 49, 50, 51: Call Claude API (MOCK FAILURE)
+  // Because Claude is not connected yet, we trigger the Red 500 Error Response exactly as the Sir requested.
+  res.status(500).json({
+    success: false,
+    message: "Summary unavailable",
+    workout: workout,
+    aiSummary: null,
+    tomorrowPlan: null,
+    newPRs: newPRs
   });
 });
 

@@ -28,6 +28,13 @@ const createUser = asyncHandler(async (req, res) => {
     });
   }
 
+    // 2.5 Check if email is already taken by a different Firebase account
+  const emailExists = await User.findOne({ email });
+  if (emailExists) {
+    res.status(409);
+    throw new Error('User already exists with this email (different Firebase account)');
+  }
+
   // 3. If no — create a new User document with the provided fields. Set onboardingComplete: false.
   const user = await User.create({
     name,
@@ -56,20 +63,21 @@ const createUser = asyncHandler(async (req, res) => {
  * @access  Private
  */
 const getUserProfile = asyncHandler(async (req, res) => {
-  // Uses req.user set by authMiddleware
-  console.log('DEBUG req.user:', req.user);
-  const user = await User.findById(req.user._id);
+  // 1. Find User in MongoDB using the uid from the Google Token (or Cheat Code)
+  const user = await User.findOne({ firebaseUid: req.user.uid });
 
-  if (user) {
-    res.status(200).json({
-      success: true,
-      message: 'Profile fetched successfully',
-      data: user
-    });
-  } else {
+  // 2. If user not found in our DB — return 404
+  if (!user) {
     res.status(404);
-    throw new Error('User not found');
+    throw new Error('Firebase user exists but no MongoDB record — prompt re-registration');
   }
+
+  // 3. Return full user object!
+  res.status(200).json({
+    success: true,
+    user: user,
+    onboardingComplete: user.onboardingComplete
+  });
 });
 
 /**

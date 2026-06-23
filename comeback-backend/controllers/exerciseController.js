@@ -2,70 +2,88 @@ const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const Exercise = require('../models/Exercise');
 
+
 /**
- * @desc    1. Get all exercises (with pagination, sorting, and optional filtering)
+ * @desc    Browse exercises with filters (Group 6)
  * @route   GET /api/exercises
- * @access  Public
+ * @access  Private
  */
 const getAllExercises = asyncHandler(async (req, res) => {
-  // Pagination
-  const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 20;
-  const skip = (page - 1) * limit;
-
-  // Filtering (e.g., ?isActive=true)
-  const filter = { isActive: true };
-
-  // Sorting
-  // Default sort by name ascending, can be overridden via ?sort=-createdAt etc.
-  let sortBy = { name: 1 };
-  if (req.query.sort) {
-    const sortField = req.query.sort.replace('-', '');
-    const sortOrder = req.query.sort.startsWith('-') ? -1 : 1;
-    sortBy = { [sortField]: sortOrder };
+  const User = require('../models/User'); 
+  
+  // 1. Fetch the user so we can see their injuries
+  const user = await User.findOne({ firebaseUid: req.user.uid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
   }
 
-  // Execute query
+  // 2. Accept query parameters (Step 111)
+  const { muscleGroup, equipment, goalTag, search, page = 1, limit = 20 } = req.query;
+  const skip = (page - 1) * limit;
+
+  const filter = { isActive: true };
+
+  // 3. Search regex match (Step 112)
+  if (search) {
+    const searchRegex = new RegExp(search, 'i'); // Case-insensitive
+    filter.$or = [
+      { name: searchRegex },
+      { goalTags: searchRegex }
+    ];
+  }
+
+  // 4. Exact filters (Step 113)
+  if (muscleGroup) filter.muscleGroup = muscleGroup; 
+  if (equipment) filter.equipment = equipment;
+  if (goalTag) filter.goalTags = goalTag;
+
+  // 5. Injury filtering (Step 114)
+  // If the user has "plantar_fasciitis", MongoDB will automatically hide jumping exercises!
+  if (user.injuries && user.injuries.length > 0) {
+    filter.avoidIf = { $nin: user.injuries }; 
+  }
+
+  // 6. Execute the massive query
   const exercises = await Exercise.find(filter)
-    .sort(sortBy)
+    .select('name gifUrl whyLabel equipment muscleGroup') // Return only required fields (Step 117)
+    .sort({ name: 1 }) // Alphabetical sort (Step 115)
     .skip(skip)
-    .limit(limit);
+    .limit(parseInt(limit)); // Paginate (Step 116)
 
   const total = await Exercise.countDocuments(filter);
 
   res.status(200).json({
-    success: true,
-    data: {
-      exercises,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-      }
-    }
+    exercises: exercises,
+    total: total
   });
 });
 
 /**
- * @desc    2. Get a single exercise by ID (Searches sourceId first, then Mongo _id)
+ * @desc    Get a single exercise by ID + User History (Group 6)
  * @route   GET /api/exercises/:id
- * @access  Public
+ * @access  Private
  */
 const getExerciseById = asyncHandler(async (req, res) => {
+  const mongoose = require('mongoose');
+  const User = require('../models/User');
+  const Workout = require('../models/Workout'); // We need this to search history!
+  
   const { id } = req.params;
-  let exercise;
 
-  // First priority: search by sourceId (e.g., '0025')
-  exercise = await Exercise.findOne({ sourceId: id, isActive: true });
+  // 1. Securely get the user
+  const user = await User.findOne({ firebaseUid: req.user.uid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
 
-  // Second priority: If not found by sourceId, try searching by MongoDB ObjectId
+  // 2. Find Exercise (Step 118)
+  // (Your friend actually wrote this part well—it allows searching by MongoDB ID or the Source ID)
+  let exercise = await Exercise.findOne({ sourceId: id, isActive: true });
   if (!exercise && mongoose.Types.ObjectId.isValid(id)) {
     exercise = await Exercise.findById(id);
-    // Ensure it's active if found
-    if (exercise && !exercise.isActive) {
-      exercise = null; 
-    }
+    if (exercise && !exercise.isActive) exercise = null; 
   }
 
   if (!exercise) {
@@ -73,12 +91,43 @@ const getExerciseById = asyncHandler(async (req, res) => {
     throw new Error('Exercise not found');
   }
 
+  // 3. Query last 3 completed Workouts that contain this exercise (Step 119)
+  const pastWorkouts = await Workout.find({
+    userId: user._id,
+    status: 'completed', // Only count finished workouts
+    'exercises.exerciseId': exercise._id
+  })
+  .sort({ date: -1 }) // Sort by newest date first
+  .limit(3);          // Only grab the last 3 times they did it
+
+  // 4. Extract the actual weights and reps (Step 120)
+  const userHistory = pastWorkouts.map(workout => {
+    // Dig into the workout to find this specific exercise
+    const workoutEx = workout.exercises.find(
+      ex => ex.exerciseId.toString() === exercise._id.toString()
+    );
+    
+    // Only grab sets that the user actually completed
+    const completedSets = workoutEx.sets
+      .filter(set => set.completed === true)
+      .map(set => ({
+        setNumber: set.setNumber,
+        reps: set.actualReps,
+        weight: set.actualWeight
+      }));
+
+    return {
+      workoutDate: workout.date,
+      sets: completedSets
+    };
+  });
+
+  // 5. Return full exercise + history (Step 121)
   res.status(200).json({
-    success: true,
-    data: exercise
+    exercise: exercise,
+    userHistory: userHistory
   });
 });
-
 /**
  * @desc    3. Get exercises by muscle group
  * @route   GET /api/exercises/muscle-group/:muscleGroup

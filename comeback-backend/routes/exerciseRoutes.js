@@ -1,24 +1,18 @@
 const express = require('express');
 const router = express.Router();
+const { protect } = require('../middleware/authMiddleware');
 const {
   getAllExercises,
-  getExerciseById,
-  getExercisesByMuscleGroup,
-  getExercisesByEquipment,
-  searchExercises,
-  filterExercises
+  getExerciseById
 } = require('../controllers/exerciseController');
 
-// NOTE: Specific/Static routes must be declared ABOVE dynamic '/:id' routes
-router.get('/search', searchExercises);
-router.get('/filter', filterExercises);
+// 1. Activate the Bouncer! (The Sir requested: "Auth required: Yes")
+router.use(protect);
 
-router.get('/muscle-group/:muscleGroup', getExercisesByMuscleGroup);
-router.get('/equipment/:equipment', getExercisesByEquipment);
-
+// 2. The Master Catalog Route
 router.get('/', getAllExercises);
 
-// Dynamic ID route must be last
+// 3. Get single exercise (must be at the bottom)
 router.get('/:id', getExerciseById);
 
 module.exports = router;

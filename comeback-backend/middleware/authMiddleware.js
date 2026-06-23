@@ -1,41 +1,42 @@
 const asyncHandler = require('express-async-handler');
-const User = require('../models/User');
+const auth = require('../config/firebase');
 
-/**
- * Placeholder Auth Middleware
- * Currently just passes through. In the future, this will verify the Firebase token
- * and attach the user document to `req.user`.
- */
 const protect = asyncHandler(async (req, res, next) => {
-  // Placeholder: Mock user attachment for testing.
-  // In production:
-  // 1. Get token from req.headers.authorization
-  // 2. Verify with firebase-admin
-  // 3. Find user in MongoDB by firebaseUid
-  // 4. Attach to req.user
-  
-  // For now, if you want to test protected routes, you can pass a mock user ID in headers
-  // e.g., 'x-mock-user-id'
-  const mockUserId = req.headers['x-mock-user-id'];
-  
-  console.log('AUTH MIDDLEWARE CALLED with mockUserId:', mockUserId);
-  if (mockUserId) {
-    const user = await User.findOne({ firebaseUid: mockUserId });
-    console.log('FOUND USER:', user);
-    if (user) {
-      req.user = user;
+   // --- POSTMAN CHEAT CODE ---
+  if (req.headers['x-postman-bypass']) {
+    // Blindly trust whatever UID we type in Postman!
+    req.user = { uid: req.headers['x-postman-bypass'] }; 
+    return next();
+  }
+  // --------------------------
+
+  let token;
+
+  // 1. Check if the frontend sent a Bearer token in the headers
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      // 2. Extract just the token part
+      token = req.headers.authorization.split(' ')[1];
+
+      // 3. Ask Google Firebase to verify if this token is real
+      const decodedToken = await auth.verifyIdToken(token);
+
+      // 4. Google says it's real! Attach the decoded user
+      req.user = decodedToken;
+      
+      next(); // Let them pass!
+    } catch (error) {
+      console.error('Firebase Token Error:', error);
+      res.status(401);
+      throw new Error('Not authorized, invalid token');
     }
   }
 
-  // To truly protect routes, uncomment below:
-  /*
-  if (!req.user) {
+  // 5. If they tried to enter without sending a token at all
+  if (!token) {
     res.status(401);
     throw new Error('Not authorized, no valid token found');
   }
-  */
-  
-  next();
 });
 
 module.exports = { protect };
