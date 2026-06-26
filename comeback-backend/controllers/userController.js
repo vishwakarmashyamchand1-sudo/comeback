@@ -7,12 +7,12 @@ const User = require('../models/User');
  * @access  Public (or protected by temporary token in real-world)
  */
 const createUser = asyncHandler(async (req, res) => {
-  const { name, email, firebaseUid } = req.body;
+  const { email, firebaseUid } = req.body;
 
   // Basic validation (extend based on exact requirements)
-  if (!name || !email || !firebaseUid) {
+  if (!email || !firebaseUid) {
     res.status(400);
-    throw new Error('Please provide name, email, and firebaseUid');
+    throw new Error('Please provide email and firebaseUid');
   }
 
   // 1. Check if user already exists
@@ -37,7 +37,6 @@ const createUser = asyncHandler(async (req, res) => {
 
   // 3. If no — create a new User document with the provided fields. Set onboardingComplete: false.
   const user = await User.create({
-    name,
     email,
     firebaseUid,
     onboardingComplete: false

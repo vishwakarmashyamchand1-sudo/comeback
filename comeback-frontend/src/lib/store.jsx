@@ -3,6 +3,8 @@ import React, { createContext, useContext, useEffect, useReducer } from 'react';
 const STORAGE_KEY = 'comeback.onboarding.v1';
 
 const initial = {
+  isAuthenticated: false,
+  token: null,
   step: 1,            // 1..5, then 'generating'
   dir: 'fwd',         // transition direction
   profile:    { name: '', gender: '', dob: { d: '', m: '', y: '' }, heightCm: '', weightKg: '' },
@@ -34,6 +36,7 @@ function reducer(state, action) {
         : [...arr, action.value];
       return { ...state, [action.slice]: { ...state[action.slice], [action.field]: next } };
     }
+    case 'login_success': return { ...state, isAuthenticated: true, token: action.token };
     case 'next':  return { ...state, step: action.step, dir: 'fwd' };
     case 'back':  return { ...state, step: action.step, dir: 'back' };
     case 'reset': return { ...initial };

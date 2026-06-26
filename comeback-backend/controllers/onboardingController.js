@@ -15,29 +15,49 @@ const saveOnboardingProfile = asyncHandler(async (req, res) => {
     throw new Error('Missing required fields: please provide step_number and data object');
   }
 
-  // 1. Validate required fields based on which step screen they are on
+  // 1. Validate required fields and map frontend keys to backend Schema keys
+  let updateData = { ...data };
+
   if (step_number === 1) {
-    if (!data.heightCm || !data.currentWeightKg || !data.targetWeightKg || !data.targetDate) {
+    if (!data.gender || !data.heightCm || !data.weightKg) {
       res.status(400);
-      throw new Error('Step 1 requires heightCm, currentWeightKg, targetWeightKg, and targetDate');
+      throw new Error('Step 1 requires gender, heightCm, and weightKg');
+    }
+    updateData.currentWeightKg = data.weightKg;
+    delete updateData.weightKg;
+    if (data.dob && data.dob.y) {
+      updateData.dateOfBirth = new Date(`${data.dob.y}-${data.dob.m || 1}-${data.dob.d || 1}`);
+      delete updateData.dob;
     }
   } else if (step_number === 2) {
-    if (!data.fitnessLevel || !data.equipmentAccess || !data.daysPerWeek) {
+    if (!data.level || !data.daysPerWeek || !data.location) {
       res.status(400);
-      throw new Error('Step 2 requires fitnessLevel, equipmentAccess, and daysPerWeek');
+      throw new Error('Step 2 requires level, daysPerWeek, and location');
     }
+    updateData.fitnessLevel = data.level; delete updateData.level;
+    updateData.preferredTime = data.time; delete updateData.time;
+    updateData.equipmentAccess = data.location; delete updateData.location;
+    updateData.strongestMuscle = data.strongest; delete updateData.strongest;
+    updateData.weakestMuscle = data.weakest; delete updateData.weakest;
   } else if (step_number === 3) {
-    if (!data.primaryGoal) {
+    if (!data.goal) {
       res.status(400);
-      throw new Error('Step 3 requires primaryGoal');
+      throw new Error('Step 3 requires goal');
     }
+    updateData.primaryGoal = data.goal; delete updateData.goal;
+    updateData.targetWeightKg = data.targetWeight; delete updateData.targetWeight;
+    updateData.upcomingEvent = data.event; delete updateData.event;
+    updateData.urgencyLevel = data.urgency; delete updateData.urgency;
   } else if (step_number === 4) {
-    if (!data.dietType) {
+    if (!data.type) {
       res.status(400);
-      throw new Error('Step 4 requires dietType');
+      throw new Error('Step 4 requires diet type');
     }
+    updateData.dietType = data.type; delete updateData.type;
+    updateData.foodRestrictions = data.restrictions; delete updateData.restrictions;
   } else if (step_number === 5) {
-    // Step 5 fields (injuries, doctor clearance) are optional, so we just let them pass
+    updateData.medicalConditions = data.conditions; delete updateData.conditions;
+    updateData.exercisesToAvoid = data.avoid; delete updateData.avoid;
   } else {
     res.status(400);
     throw new Error('Invalid step number. Must be between 1 and 5');
@@ -46,7 +66,7 @@ const saveOnboardingProfile = asyncHandler(async (req, res) => {
   // 2. & 3. Use $set to patch only the fields for this step, never overwriting previous steps!
   const updatedUser = await User.findOneAndUpdate(
     { firebaseUid: req.user.firebaseUid }, // Securely find them using the token UID
-    { $set: data },
+    { $set: updateData },
     { new: true, runValidators: true }
   );
 
@@ -84,12 +104,11 @@ const completeOnboarding = asyncHandler(async (req, res) => {
     throw new Error('Incomplete user profile. Please finish all 5 steps first.');
   }
 
-  // 3. Save Baseline data (Step 16 from the Sir's doc)
-  const { baselineLifts, strongestMuscle, weakestMuscle } = req.body;
-  
-  if (baselineLifts) user.baselineLifts = baselineLifts;
-  if (strongestMuscle) user.strongestMuscle = strongestMuscle;
-  if (weakestMuscle) user.weakestMuscle = weakestMuscle;
+  // 3. Save Baseline data (Optional)
+  const { baselineLifts } = req.body;
+  if (baselineLifts) {
+    user.baselineLifts = baselineLifts;
+  }
 
   // 4. Calculate Calories & Protein (Steps 17 & 18 from the Sir's doc)
   let bmr = 0;

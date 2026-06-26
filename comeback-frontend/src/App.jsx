@@ -7,6 +7,7 @@ import Step3 from './screens/Step3.jsx';
 import Step4 from './screens/Step4.jsx';
 import Step5 from './screens/Step5.jsx';
 import Generating from './screens/Generating.jsx';
+import Auth from './screens/Auth.jsx';
 
 export default function App() {
   const { state, dispatch } = useOnboarding();
@@ -14,7 +15,38 @@ export default function App() {
   const [done, setDone] = useState(false);
 
   const go = next => dispatch({ type: next > step ? 'next' : 'back', step: next });
-  const next = () => (step < 5 ? go(step + 1) : dispatch({ type: 'next', step: 'generating' }));
+  
+  const next = async () => {
+    if (state.token) {
+      try {
+        const slices = { 1: 'profile', 2: 'background', 3: 'goal', 4: 'diet', 5: 'health' };
+        const sliceKey = slices[step];
+        if (sliceKey) {
+          await fetch('/api/onboarding/profile', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${state.token}`
+            },
+            body: JSON.stringify({ step_number: step, data: state[sliceKey] })
+          });
+        }
+        if (step === 5) {
+          await fetch('/api/onboarding/complete', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${state.token}`
+            },
+            body: JSON.stringify({})
+          });
+        }
+      } catch (err) {
+        console.error("API sync failed", err);
+      }
+    }
+    step < 5 ? go(step + 1) : dispatch({ type: 'next', step: 'generating' });
+  };
   const back = () => {
     if (step === 'generating') return dispatch({ type: 'back', step: 5 });
     if (step > 1) go(step - 1);
@@ -38,7 +70,11 @@ export default function App() {
     }[step];
   }
 
-  const dark = step === 'generating';
+  if (!state.isAuthenticated) {
+    screen = <Auth />;
+  }
+
+  const dark = step === 'generating' || !state.isAuthenticated;
 
   return (
     <div className="app-shell" style={dark ? { background: '#1A1A2E' } : undefined}>

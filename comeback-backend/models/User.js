@@ -4,10 +4,10 @@ const mongoose = require('mongoose');
 const UserSchema = new mongoose.Schema({
 
   // ── Basic Info ──────────────────────────────
-  name:            { type: String,  required: true },
+  name:            { type: String }, // Optional during signup, collected in Step 1
   email:           { type: String,  required: true, unique: true, index: true },
   firebaseUid:     { type: String,  required: true, unique: true, index: true },
-  gender:          { type: String,  enum: ['male', 'female', 'other'] },
+  gender:          { type: String },
   dateOfBirth:     { type: Date },
 
   // ── Body Metrics ─────────────────────────────
@@ -18,32 +18,30 @@ const UserSchema = new mongoose.Schema({
   targetDate:      { type: Date },
 
   // ── Fitness Background ───────────────────────
-  fitnessLevel: {
-    type: String,
-    enum: ['beginner', 'returning', 'active']
-  },
-  equipmentAccess:  { type: String, enum: ['full_gym', 'home', 'none'] },
+  fitnessLevel: { type: String },
+  lastActive:       { type: String },
+  equipmentAccess:  { type: String },
+  preferredTime:    { type: String },
   daysPerWeek:      { type: Number, min: 1, max: 7 },
 
   // ── Goals ────────────────────────────────────
-  primaryGoal: {
-    type: String,
-    enum: ['fat_loss', 'muscle_gain', 'fitness_energy']
-  },
+  primaryGoal: { type: String },
+  upcomingEvent:    { type: String },
+  urgencyLevel:     { type: String },
 
   // ── Targets (AI-calculated) ──────────────────
   dailyCalorieTarget:  { type: Number },
   dailyProteinTarget:  { type: Number },
 
   // ── Diet Profile ─────────────────────────────
-  dietType: {
-    type: String,
-    enum: ['vegetarian', 'eggetarian', 'non_veg']
-  },
+  dietType: { type: String },
   foodRestrictions: [{ type: String }],  // e.g. ['no_dairy', 'no_gluten']
+  supplements:      [{ type: String }],
 
   // ── Health & Injuries ─────────────────────────
-  injuries:   [{ type: String }],  // e.g. ['plantar_fasciitis', 'knee']
+  injuries:          [{ type: String }],  // e.g. ['plantar_fasciitis', 'knee']
+  medicalConditions: [{ type: String }],
+  exercisesToAvoid:  { type: String },
 
   // ── Baseline Performance (from onboarding) ───
   baselineLifts: {
