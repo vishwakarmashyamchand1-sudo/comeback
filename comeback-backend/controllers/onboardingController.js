@@ -45,7 +45,7 @@ const saveOnboardingProfile = asyncHandler(async (req, res) => {
 
   // 2. & 3. Use $set to patch only the fields for this step, never overwriting previous steps!
   const updatedUser = await User.findOneAndUpdate(
-    { firebaseUid: req.user.uid }, // Securely find them using the token UID
+    { firebaseUid: req.user.firebaseUid }, // Securely find them using the token UID
     { $set: data },
     { new: true, runValidators: true }
   );
@@ -71,7 +71,7 @@ const completeOnboarding = asyncHandler(async (req, res) => {
   const Workout = require('../models/Workout');
   
   // 1. Securely fetch user using Firebase Token
-  const user = await User.findOne({ firebaseUid: req.user.uid });
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
 
   if (!user) {
     res.status(404);
@@ -89,7 +89,7 @@ const completeOnboarding = asyncHandler(async (req, res) => {
   
   if (baselineLifts) user.baselineLifts = baselineLifts;
   if (strongestMuscle) user.strongestMuscle = strongestMuscle;
-  // (Your User model doesn't have weakestMuscle yet, so we will skip it for now!)
+  if (weakestMuscle) user.weakestMuscle = weakestMuscle;
 
   // 4. Calculate Calories & Protein (Steps 17 & 18 from the Sir's doc)
   let bmr = 0;

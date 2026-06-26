@@ -63,11 +63,11 @@ const createUser = asyncHandler(async (req, res) => {
  * @access  Private
  */
 const getUserProfile = asyncHandler(async (req, res) => {
-  // 1. Find User in MongoDB using the uid from the Google Token (or Cheat Code)
-  const user = await User.findOne({ firebaseUid: req.user.uid });
+  // 1. The protect middleware already fetched the user from MongoDB!
+  const user = req.user;
 
-  // 2. If user not found in our DB — return 404
-  if (!user) {
+  // 2. If the middleware only found a Firebase token but no MongoDB record
+  if (!user || !user._id) {
     res.status(404);
     throw new Error('Firebase user exists but no MongoDB record — prompt re-registration');
   }

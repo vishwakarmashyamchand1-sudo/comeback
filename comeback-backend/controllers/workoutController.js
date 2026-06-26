@@ -57,7 +57,7 @@ const getTodayWorkout = asyncHandler(async (req, res) => {
   today.setUTCHours(0, 0, 0, 0);
 
   // --- THE FIX: We have to find the Mongo User FIRST using Firebase UID! ---
-  const user = await User.findOne({ firebaseUid: req.user.uid });
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
   if (!user) {
     res.status(404);
     throw new Error('User not found');
@@ -127,7 +127,7 @@ const getWorkoutHistory = asyncHandler(async (req, res) => {
   const Metric = require('../models/Metrics'); // Need metrics to pull the PRs
 
   // 1. Securely fetch User via Firebase Token
-  const user = await User.findOne({ firebaseUid: req.user.uid });
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
   if (!user) {
     res.status(404);
     throw new Error('User not found');
@@ -304,7 +304,7 @@ const logSet = asyncHandler(async (req, res) => {
   }
 
   // 1. Securely fetch User using Firebase token
-  const user = await User.findOne({ firebaseUid: req.user.uid });
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
   if (!user) {
     res.status(404);
     throw new Error('User not found');
@@ -362,7 +362,7 @@ const addExercise = asyncHandler(async (req, res) => {
   }
 
   // 1. Securely find the user via Firebase Token
-  const user = await User.findOne({ firebaseUid: req.user.uid });
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
   if (!user) {
     res.status(404);
     throw new Error('User not found');
@@ -408,6 +408,9 @@ const addExercise = asyncHandler(async (req, res) => {
 
   await workout.save();
 
+  // Populate the exercises before returning so the frontend has the gifUrls
+  await workout.populate('exercises.exerciseId', 'name equipment targetMuscle gifUrl whyLabel');
+
   // Step 45: Return the updated workout
   res.status(200).json({
     workout: workout
@@ -432,7 +435,7 @@ const skipExercise = asyncHandler(async (req, res) => {
   }
 
   // Securely find User via Firebase Token
-  const user = await User.findOne({ firebaseUid: req.user.uid });
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
   if (!user) {
     res.status(404);
     throw new Error('User not found');
@@ -484,7 +487,7 @@ const swapMuscle = asyncHandler(async (req, res) => {
   }
 
   // 1. Fetch User Securely
-  const user = await User.findOne({ firebaseUid: req.user.uid });
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
   if (!user) {
     res.status(404);
     throw new Error('User not found');
@@ -550,7 +553,7 @@ const confirmPlan = asyncHandler(async (req, res) => {
   }
 
   // 1. Securely fetch User via Firebase Token
-  const user = await User.findOne({ firebaseUid: req.user.uid });
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
   if (!user) {
     res.status(404);
     throw new Error('User not found');
@@ -599,7 +602,7 @@ const completeWorkout = asyncHandler(async (req, res) => {
   }
 
   // 1. Fetch User securely via Firebase Token
-  const user = await User.findOne({ firebaseUid: req.user.uid });
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
   if (!user) {
     res.status(404);
     throw new Error('User not found');

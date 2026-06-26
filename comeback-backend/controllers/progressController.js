@@ -4,12 +4,21 @@ const Metric = require('../models/Metrics');
 const WeeklySummary = require('../models/WeeklySummarize');
 
 /**
- * @desc    Get holistic progress dashboard (Phase 8)
- * @route   GET /api/progress/dashboard
+ * @desc    Get all progress data for the Progress tab
+ * @route   GET /api/progress/overview
  * @access  Private
  */
-const getProgressDashboard = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
+const getProgressOverview = asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  
+  // Securely fetch User
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const userId = user._id;
 
   // 122. Query Metric documents for this user, sorted by weekNumber
   const metrics = await Metric.find({ userId }).sort({ weekNumber: 1 });
@@ -59,19 +68,16 @@ const getProgressDashboard = asyncHandler(async (req, res) => {
 
   // 127. Return everything in a single response
   res.status(200).json({
-    success: true,
-    data: {
-      weightHistory,
-      weeklySessionCounts,
-      weeklyProteinAvgs,
-      currentStreak,
-      totalSessionsCompleted,
-      patternInsights,
-      milestones
-    }
+    weightHistory,
+    weeklySessionCounts,
+    weeklyProteinAvgs,
+    currentStreak,
+    totalSessionsCompleted,
+    patternInsights,
+    milestones
   });
 });
 
 module.exports = {
-  getProgressDashboard
+  getProgressOverview
 };

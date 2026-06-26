@@ -10,6 +10,7 @@ const connectDB = require('./config/db');
 const cron = require('node-cron');
 const { runDailyTipJob } = require('./jobs/dailyTipJob');
 const { runWeeklySummaryJob } = require('./jobs/weeklySummaryJob');
+const { runWeeklyPlanGeneration } = require('./jobs/weeklyPlanJob');
 
 const PORT = process.env.PORT || 5000;
 
@@ -26,8 +27,7 @@ connectDB().then(() => {
 
     // Monday 6:00 AM - Generate next week plan (Call 11)
     cron.schedule('0 6 * * 1', () => {
-      runDailyTipJob(); // Reusing placeholder for now
-      console.log('[JOB] Generating next week plan');
+      runWeeklyPlanGeneration();
     });
 
   });

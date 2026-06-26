@@ -12,15 +12,18 @@ const getAllExercises = asyncHandler(async (req, res) => {
   const User = require('../models/User'); 
   
   // 1. Fetch the user so we can see their injuries
-  const user = await User.findOne({ firebaseUid: req.user.uid });
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
   if (!user) {
     res.status(404);
     throw new Error('User not found');
   }
 
   // 2. Accept query parameters (Step 111)
-  const { muscleGroup, equipment, goalTag, search, page = 1, limit = 20 } = req.query;
-  const skip = (page - 1) * limit;
+  const pageNum = parseInt(req.query.page) || 1;
+  const limitNum = parseInt(req.query.limit) || 20;
+  const skip = (pageNum - 1) * limitNum;
+  
+  const { muscleGroup, equipment, goalTag, search } = req.query;
 
   const filter = { isActive: true };
 
@@ -34,9 +37,10 @@ const getAllExercises = asyncHandler(async (req, res) => {
   }
 
   // 4. Exact filters (Step 113)
-  if (muscleGroup) filter.muscleGroup = muscleGroup; 
-  if (equipment) filter.equipment = equipment;
-  if (goalTag) filter.goalTags = goalTag;
+  // We use regex with '^' and '$' to ensure exact matches, but 'i' makes them case-insensitive!
+  if (muscleGroup) filter.muscleGroup = new RegExp('^' + muscleGroup + '$', 'i'); 
+  if (equipment) filter.equipment = new RegExp('^' + equipment + '$', 'i');
+  if (goalTag) filter.goalTags = new RegExp('^' + goalTag + '$', 'i');
 
   // 5. Injury filtering (Step 114)
   // If the user has "plantar_fasciitis", MongoDB will automatically hide jumping exercises!
@@ -49,7 +53,7 @@ const getAllExercises = asyncHandler(async (req, res) => {
     .select('name gifUrl whyLabel equipment muscleGroup') // Return only required fields (Step 117)
     .sort({ name: 1 }) // Alphabetical sort (Step 115)
     .skip(skip)
-    .limit(parseInt(limit)); // Paginate (Step 116)
+    .limit(limitNum); // Paginate (Step 116)
 
   const total = await Exercise.countDocuments(filter);
 
@@ -72,7 +76,7 @@ const getExerciseById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   // 1. Securely get the user
-  const user = await User.findOne({ firebaseUid: req.user.uid });
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
   if (!user) {
     res.status(404);
     throw new Error('User not found');

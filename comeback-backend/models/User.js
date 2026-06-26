@@ -53,6 +53,7 @@ const UserSchema = new mongoose.Schema({
     deadliftKg:      { type: Number },
   },
   strongestMuscle: { type: String },   // e.g. 'chest'
+  weakestMuscle:   { type: String },   // e.g. 'legs'
 
   // ── App State ─────────────────────────────────
   onboardingComplete: { type: Boolean, default: false },

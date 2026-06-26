@@ -1,21 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const {
-  addMeal,
+  logMeal,
   updateMeal,
   deleteMeal,
   getTodayDiet,
   getDietHistory,
   getDietSummary,
   updateWater,
-  getDietTip
+  getDietTip,
+  analyzePhoto
 } = require('../controllers/dietLogController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.use(protect);
 
-// 1. POST /api/diet/meal
-router.post('/meal', addMeal);
+// POST /api/diet/analyze-photo
+router.post('/analyze-photo', analyzePhoto);
+
+// POST /api/diet/log-meal
+router.post('/log-meal', logMeal);
 
 // 2. PATCH /api/diet/meal/:mealId
 router.patch('/meal/:mealId', updateMeal);

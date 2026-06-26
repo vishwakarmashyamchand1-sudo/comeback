@@ -18,10 +18,7 @@ const coachChat = asyncHandler(async (req, res) => {
   // Calls the AI service
   const response = await handleUserQuery(message, req.user, conversationHistory, intent);
 
-  res.status(200).json({
-    success: true,
-    data: response
-  });
+  res.status(200).json(response);
 });
 
 /**
@@ -65,9 +62,8 @@ const confirmCoachPlan = asyncHandler(async (req, res) => {
   clearPendingPlan(pendingPlanId);
 
   res.status(200).json({
-    success: true,
-    message: "Tomorrow's plan saved successfully",
-    workout
+    workout,
+    message: "Tomorrow's plan saved successfully"
   });
 });
 

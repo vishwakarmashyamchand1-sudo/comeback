@@ -19,13 +19,14 @@ const handleUserQuery = async (query, userContext, conversationHistory, intent) 
 
   let replyText = "I am your AI coach. How can I help you today?";
   let pendingPlanId = null;
+  let simulatedPlan = null;
 
   // 2. Mocking Call 08 Claude API Logic
   if (intent === 'modify_tomorrow') {
     // Simulate detecting a workout plan JSON block from Claude's response
     replyText = "I've modified tomorrow's workout to accommodate your shoulder pain. Here is the updated plan for you to review.";
     
-    const simulatedPlan = [
+    simulatedPlan = [
       {
         "exerciseId": "60d5ecb8b392d700153c3000", // Mock ID, frontend should ideally send actual valid ObjectIds if it knows them, or backend resolves. We will just pass it through.
         "exerciseName": "Light Dumbbell Press",
@@ -60,6 +61,7 @@ const handleUserQuery = async (query, userContext, conversationHistory, intent) 
 
   return { 
     reply: replyText,
+    workoutPlanJson: intent === 'modify_tomorrow' ? simulatedPlan : null,
     pendingPlanId
   };
 };
