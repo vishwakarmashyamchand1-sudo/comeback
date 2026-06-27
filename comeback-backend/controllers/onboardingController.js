@@ -19,45 +19,54 @@ const saveOnboardingProfile = asyncHandler(async (req, res) => {
   let updateData = { ...data };
 
   if (step_number === 1) {
-    if (!data.gender || !data.heightCm || !data.weightKg) {
+    if (!data.gender || !data.heightCm || !data.currentWeightKg || !data.targetWeightKg || !data.targetDate) {
       res.status(400);
-      throw new Error('Step 1 requires gender, heightCm, and weightKg');
+      throw new Error('Step 1 requires gender, heightCm, currentWeightKg, targetWeightKg, and targetDate');
     }
-    updateData.currentWeightKg = data.weightKg;
-    delete updateData.weightKg;
-    if (data.dob && data.dob.y) {
-      updateData.dateOfBirth = new Date(`${data.dob.y}-${data.dob.m || 1}-${data.dob.d || 1}`);
-      delete updateData.dob;
-    }
+    updateData.heightCm = data.heightCm;
+    updateData.currentWeightKg = data.currentWeightKg;
+    updateData.targetWeightKg = data.targetWeightKg;
+    updateData.targetDate = data.targetDate;
+    updateData.gender = data.gender;
+    updateData.dateOfBirth = data.dateOfBirth;
   } else if (step_number === 2) {
-    if (!data.level || !data.daysPerWeek || !data.location) {
+    if (!data.fitnessLevel || !data.daysPerWeek || !data.equipmentAccess) {
       res.status(400);
-      throw new Error('Step 2 requires level, daysPerWeek, and location');
+      throw new Error('Step 2 requires fitnessLevel, daysPerWeek, and equipmentAccess');
     }
-    updateData.fitnessLevel = data.level; delete updateData.level;
-    updateData.preferredTime = data.time; delete updateData.time;
-    updateData.equipmentAccess = data.location; delete updateData.location;
-    updateData.strongestMuscle = data.strongest; delete updateData.strongest;
-    updateData.weakestMuscle = data.weakest; delete updateData.weakest;
+    updateData.fitnessLevel = data.fitnessLevel;
+    updateData.lastActive = data.lastActivePeriod; // mapped to model
+    updateData.equipmentAccess = data.equipmentAccess;
+    updateData.daysPerWeek = data.daysPerWeek;
+    updateData.preferredTime = data.preferredTime;
+    if (data.strongestMuscle) updateData.strongestMuscle = data.strongestMuscle;
+    if (data.weakestMuscle) updateData.weakestMuscle = data.weakestMuscle;
   } else if (step_number === 3) {
-    if (!data.goal) {
+    if (!data.primaryGoal || !data.motivationEvent || !data.urgencyLevel) {
       res.status(400);
-      throw new Error('Step 3 requires goal');
+      throw new Error('Step 3 requires primaryGoal, motivationEvent, and urgencyLevel');
     }
-    updateData.primaryGoal = data.goal; delete updateData.goal;
-    updateData.targetWeightKg = data.targetWeight; delete updateData.targetWeight;
-    updateData.upcomingEvent = data.event; delete updateData.event;
-    updateData.urgencyLevel = data.urgency; delete updateData.urgency;
+    updateData.primaryGoal = data.primaryGoal;
+    updateData.upcomingEvent = data.motivationEvent; // mapped to model
+    updateData.urgencyLevel = data.urgencyLevel;
   } else if (step_number === 4) {
-    if (!data.type) {
+    if (!data.dietType || !data.foodRestrictions || data.foodRestrictions.length === 0 || !data.supplementsTaken || data.supplementsTaken.length === 0) {
       res.status(400);
-      throw new Error('Step 4 requires diet type');
+      throw new Error('Step 4 requires dietType, foodRestrictions, and supplementsTaken');
     }
-    updateData.dietType = data.type; delete updateData.type;
-    updateData.foodRestrictions = data.restrictions; delete updateData.restrictions;
+    updateData.dietType = data.dietType;
+    updateData.foodRestrictions = data.foodRestrictions;
+    updateData.supplements = data.supplementsTaken; // mapped to model
   } else if (step_number === 5) {
-    updateData.medicalConditions = data.conditions; delete updateData.conditions;
-    updateData.exercisesToAvoid = data.avoid; delete updateData.avoid;
+    if (!data.injuries || data.injuries.length === 0 || !data.medicalConditions || data.medicalConditions.length === 0 || typeof data.exercisesToAvoid === 'undefined' || typeof data.doctorClearance === 'undefined') {
+      res.status(400);
+      throw new Error('Step 5 requires injuries, conditions, exercisesToAvoid, and doctorClearance');
+    }
+    updateData.injuries = data.injuries;
+    updateData.medicalConditions = data.medicalConditions;
+    updateData.exercisesToAvoid = data.exercisesToAvoid;
+    // doctorClearance isn't stored in User model currently, but we validate it per API doc
+
   } else {
     res.status(400);
     throw new Error('Invalid step number. Must be between 1 and 5');

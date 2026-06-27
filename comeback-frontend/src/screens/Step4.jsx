@@ -15,6 +15,7 @@ const RESTRICTIONS = [
   { id: 'No dairy',        sub: 'Lactose intolerant or preference' },
   { id: 'No gluten' },
   { id: 'Jain diet',       sub: 'No root vegetables' },
+  {id:'None'},
 ];
 const SUPPLEMENTS = ['Creatine', 'Vitamin D', 'Omega 3', 'Multivitamin', 'None'];
 
@@ -24,7 +25,7 @@ export default function Step4({ onNext, onBack, onSkip, dir }) {
   const set = value => dispatch({ type: 'patch', slice: 'diet', value });
   const toggle = (field, value) => dispatch({ type: 'toggle', slice: 'diet', field, value });
 
-  const valid = !!d.type;
+   const valid = d.type && d.restrictions.length > 0 && d.supplements.length > 0;
 
   return (
     <div className={`screen anim-${dir}`}>

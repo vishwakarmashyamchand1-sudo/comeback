@@ -10,11 +10,12 @@ export default function Auth() {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState(''); // NEW: Name state
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const valid = (email && password.length >= 6);
+  const valid = isLogin ? (email && password.length >= 6) : (name && email && password.length >= 6);
 
   const handleSubmit = async () => {
     if (!valid) return;
@@ -31,26 +32,40 @@ export default function Auth() {
 
       const token = await userCredential.user.getIdToken();
 
-      // Hit Backend using fetch
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          email: userCredential.user.email,
-          firebaseUid: userCredential.user.uid
-        })
-      });
+      let res;
+      let data;
 
-      const data = await res.json();
+      if (isLogin) {
+        // If logging in, just fetch their existing profile!
+        res = await fetch('/api/auth/me', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      } else {
+        // If signing up, hit the register endpoint with their Name
+        res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            name: name,
+            email: userCredential.user.email,
+            firebaseUid: userCredential.user.uid
+          })
+        });
+      }
+
+      data = await res.json();
       
       if (!res.ok) {
         throw new Error(data.message || 'Authentication failed');
       }
 
-      // Backend returns isNewUser flag. 
+      // Backend returns isNewUser flag on register, or onboardingComplete on /me. 
       // In this setup, we just mark auth as success and app will render Step 1
       dispatch({ type: 'login_success', token });
 
@@ -79,12 +94,25 @@ export default function Auth() {
 
       <div style={{ marginTop: '10px' }}>
         
+        {/* Only show Name field if they are signing up */}
+        {!isLogin && (
+          <div style={{ marginBottom: '16px' }}>
+            <TextField 
+              value={name} 
+              onChange={setName} 
+              placeholder="Your full name" 
+              type="text"
+            />
+          </div>
+        )}
+
         <div style={{ marginBottom: '16px' }}>
           <TextField 
             value={email} 
             onChange={setEmail} 
             placeholder="Email address" 
             type="email"
+            autoComplete="off"
           />
         </div>
 
@@ -94,6 +122,7 @@ export default function Auth() {
             onChange={setPassword} 
             placeholder="Password (min 6 characters)" 
             type="password"
+            autoComplete="new-password"
           />
         </div>
 

@@ -12,12 +12,14 @@ const INJURIES = [
   { id: 'Shoulder',          icon: 'hand-stop' },
   { id: 'Elbow / wrist',     icon: 'arm' },
   { id: 'Neck',              icon: 'e-passport' },
+  { id: 'None' }, // Add this!
 ];
 const CONDITIONS = [
   { id: 'Diabetes (Type 1 or 2)' },
   { id: 'Hypertension' },
   { id: 'Thyroid condition' },
   { id: 'Heart condition', sub: 'Doctor clearance recommended' },
+  { id: 'None' }, // Add this!
 ];
 
 export default function Step5({ onNext, onBack, onSkip, dir }) {
@@ -25,6 +27,9 @@ export default function Step5({ onNext, onBack, onSkip, dir }) {
   const h = state.health;
   const set = value => dispatch({ type: 'patch', slice: 'health', value });
   const toggle = (field, value) => dispatch({ type: 'toggle', slice: 'health', field, value });
+
+
+  const valid = h.injuries.length > 0 && h.conditions.length > 0;
 
   return (
     <div className={`screen anim-${dir}`}>
@@ -59,7 +64,7 @@ export default function Step5({ onNext, onBack, onSkip, dir }) {
         placeholder="e.g. No running, no jumping (optional)" />
 
       <div className="cta">
-        <PrimaryButton onClick={onNext}>
+        <PrimaryButton onClick={onNext}disabled={!valid}>
           Build my plan <i className="ti ti-arrow-right btn-icon" />
         </PrimaryButton>
       </div>

@@ -21,7 +21,8 @@ export default function Step1({ onNext, onBack, onSkip, dir }) {
 
   const valid =
     p.name.trim() && p.gender && age != null &&
-    p.heightCm && p.weightKg && !hErr && !wErr;
+    p.heightCm && p.weightKg && !hErr && !wErr &&
+    p.targetWeight && p.targetDate;
 
   return (
     <div className={`screen anim-${dir}`}>
@@ -61,6 +62,12 @@ export default function Step1({ onNext, onBack, onSkip, dir }) {
         <SuffixField value={p.weightKg} onChange={v => set({ weightKg: v })} placeholder="79" suffix="kg" error={!!wErr} />
       </div>
       {(hErr || wErr) && <div className="err-text"><i className="ti ti-alert-circle" /> {hErr || wErr}</div>}
+
+            <SectionLabel>Target weight &amp; date</SectionLabel>
+      <div className="input-row col2">
+        <SuffixField value={p.targetWeight} onChange={v => set({ targetWeight: v })} placeholder="70" suffix="kg" />
+        <TextField type="date" value={p.targetDate} onChange={v => set({ targetDate: v })} />
+      </div>
 
       {band && (
         <div className="bmi-strip" style={{ marginTop: 12 }}>

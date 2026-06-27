@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useReducer } from 'react';
+import { auth } from './firebase.js';
+import { onIdTokenChanged } from 'firebase/auth';
 
 const STORAGE_KEY = 'comeback.onboarding.v1';
 
@@ -7,7 +9,7 @@ const initial = {
   token: null,
   step: 1,            // 1..5, then 'generating'
   dir: 'fwd',         // transition direction
-  profile:    { name: '', gender: '', dob: { d: '', m: '', y: '' }, heightCm: '', weightKg: '' },
+  profile:    { name: '', gender: '', dob: { d: '', m: '', y: '' }, heightCm: '', weightKg: '', targetWeight: '', targetDate: '' },
   background: { level: '', lastActive: '', daysPerWeek: '', time: '', location: '', strongest: '', weakest: '' },
   goal:       { goal: '', targetWeight: '', targetDate: '', event: '', urgency: '' },
   diet:       { type: '', restrictions: [], supplements: [] },
@@ -53,6 +55,18 @@ export function OnboardingProvider({ children }) {
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
   }, [state]);
+
+  // Listen to Firebase token refreshes in the background!
+  useEffect(() => {
+    const unsub = onIdTokenChanged(auth, async (user) => {
+      if (user) {
+        // Firebase automatically gets a fresh token right before the old one expires
+        const freshToken = await user.getIdToken();
+        dispatch({ type: 'login_success', token: freshToken, user: { name: state.profile.name } });
+      }
+    });
+    return unsub;
+  }, [state.profile.name]);
 
   return <Ctx.Provider value={{ state, dispatch }}>{children}</Ctx.Provider>;
 }

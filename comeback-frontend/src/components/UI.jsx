@@ -28,8 +28,7 @@ export function ProgressSteps({ current, total = 5 }) {
 export function ObHeader({ step, onBack, onSkip, canSkip = true }) {
   return (
     <div className="ob-header">
-      <button className="back-btn" onClick={onBack} aria-label="Back" disabled={step === 1}
-        style={step === 1 ? { opacity: .4, pointerEvents: 'none' } : undefined}>
+      <button className="back-btn" onClick={onBack} aria-label="Back">
         <i className="ti ti-arrow-left" />
       </button>
       <span className="step-counter">Step {step} of 5</span>
@@ -54,7 +53,7 @@ export function SectionLabel({ children }) {
   return <div className="s-label">{children}</div>;
 }
 
-export function TextField({ value, onChange, placeholder, type = 'text', error, hint, hintOk, style }) {
+export function TextField({ value, onChange, placeholder, type = 'text', error, hint, hintOk, style, autoComplete }) {
   return (
     <div>
       <input
@@ -64,6 +63,7 @@ export function TextField({ value, onChange, placeholder, type = 'text', error, 
         placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
         style={style}
+        autoComplete={autoComplete}
       />
       {error
         ? <div className="err-text"><i className="ti ti-alert-circle" /> {error}</div>

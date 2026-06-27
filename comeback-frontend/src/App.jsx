@@ -17,20 +17,65 @@ export default function App() {
   const go = next => dispatch({ type: next > step ? 'next' : 'back', step: next });
   
   const next = async () => {
-    if (state.token) {
+    const slices = { 1: 'profile', 2: 'background', 3: 'goal', 4: 'diet', 5: 'health' };
+    const sliceKey = slices[step];
+
+    if (state.isAuthenticated) {
       try {
-        const slices = { 1: 'profile', 2: 'background', 3: 'goal', 4: 'diet', 5: 'health' };
-        const sliceKey = slices[step];
         if (sliceKey) {
+          let payloadData = {};
+          const localData = state[sliceKey];
+          
+          if (step === 1) {
+            payloadData = {
+              heightCm: localData.heightCm,
+              currentWeightKg: localData.weightKg,
+              targetWeightKg: localData.targetWeight,
+              targetDate: localData.targetDate,
+              dateOfBirth: localData.dob && localData.dob.y ? new Date(`${localData.dob.y}-${localData.dob.m || 1}-${localData.dob.d || 1}`).toISOString() : null,
+              gender: localData.gender
+            };
+          } else if (step === 2) {
+            payloadData = {
+              fitnessLevel: localData.level,
+              lastActivePeriod: localData.lastActive,
+              equipmentAccess: localData.location,
+              daysPerWeek: localData.daysPerWeek,
+              preferredTime: localData.time,
+              strongestMuscle: localData.strongest,
+              weakestMuscle: localData.weakest
+            };
+          } else if (step === 3) {
+            payloadData = {
+              primaryGoal: localData.goal,
+              motivationEvent: localData.event,
+              urgencyLevel: localData.urgency
+            };
+          } else if (step === 4) {
+            payloadData = {
+              dietType: localData.type,
+              foodRestrictions: localData.restrictions,
+              supplementsTaken: localData.supplements
+            };
+          } else if (step === 5) {
+            payloadData = {
+              injuries: localData.injuries,
+              conditions: localData.conditions,
+              exercisesToAvoid: localData.avoid,
+              doctorClearance: localData.conditions.includes('Heart condition') // Derived from conditions
+            };
+          }
+
           await fetch('/api/onboarding/profile', {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${state.token}`
             },
-            body: JSON.stringify({ step_number: step, data: state[sliceKey] })
+            body: JSON.stringify({ step_number: step, data: payloadData })
           });
         }
+        
         if (step === 5) {
           await fetch('/api/onboarding/complete', {
             method: 'POST',
@@ -45,11 +90,13 @@ export default function App() {
         console.error("API sync failed", err);
       }
     }
+    
     step < 5 ? go(step + 1) : dispatch({ type: 'next', step: 'generating' });
   };
   const back = () => {
     if (step === 'generating') return dispatch({ type: 'back', step: 5 });
     if (step > 1) go(step - 1);
+     if (step === 1) return dispatch({ type: 'reset' });
   };
   const skip = () => next();
 

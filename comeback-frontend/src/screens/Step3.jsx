@@ -17,7 +17,7 @@ export default function Step3({ onNext, onBack, onSkip, dir }) {
   const g = state.goal;
   const set = value => dispatch({ type: 'patch', slice: 'goal', value });
 
-  const valid = g.goal && g.urgency;
+    const valid = g.goal && g.urgency && g.event;
 
   return (
     <div className={`screen anim-${dir}`}>
@@ -33,11 +33,6 @@ export default function Step3({ onNext, onBack, onSkip, dir }) {
           selected={g.goal === o.id} onClick={() => set({ goal: o.id })} />
       ))}
 
-      <SectionLabel>Target weight</SectionLabel>
-      <div className="input-row col2">
-        <SuffixField value={g.targetWeight} onChange={v => set({ targetWeight: v })} placeholder="75" suffix="kg" />
-        <SuffixField value={g.targetDate} onChange={v => set({ targetDate: v })} placeholder="By when?" suffix="date" />
-      </div>
 
       <SectionLabel>Any specific event motivating you?</SectionLabel>
       <TextField value={g.event} onChange={v => set({ event: v })} placeholder="e.g. Wedding anniversary — July 1" />

@@ -2,7 +2,7 @@ import React from 'react';
 import { useOnboarding } from '../lib/store.jsx';
 import {
   StatusBar, ObHeader, ProgressSteps, StepIntro, SectionLabel,
-  OptionCard, PillGroup, PrimaryButton,
+  OptionCard, PillGroup, PrimaryButton,TextField
 } from '../components/UI.jsx';
 
 const LEVELS = [
@@ -12,13 +12,14 @@ const LEVELS = [
 ];
 const LAST = ['1–3 months ago', '3–6 months ago', '6–12 months ago', '1+ year ago'];
 const TIMES = ['Morning', 'Evening', 'Flexible'];
+const LOCATIONS = ['Full Gym', 'Home (Dumbbells)', 'none'];
 
 export default function Step2({ onNext, onBack, onSkip, dir }) {
   const { state, dispatch } = useOnboarding();
   const b = state.background;
   const set = value => dispatch({ type: 'patch', slice: 'background', value });
 
-  const valid = b.level && b.daysPerWeek && b.time;
+  const valid = b.level && b.daysPerWeek   && b.location;
 
   return (
     <div className={`screen anim-${dir}`}>
@@ -48,8 +49,20 @@ export default function Step2({ onNext, onBack, onSkip, dir }) {
         ))}
       </div>
 
+
       <SectionLabel>Preferred time</SectionLabel>
       <PillGroup options={TIMES} value={b.time} onChange={v => set({ time: v })} />
+
+
+
+      <SectionLabel>Strongest muscle (optional)</SectionLabel>
+      <TextField value={b.strongest} onChange={v => set({ strongest: v })} placeholder="e.g. Chest, Legs" />
+
+      <SectionLabel>Weakest muscle (optional)</SectionLabel>
+      <TextField value={b.weakest} onChange={v => set({ weakest: v })} placeholder="e.g. Back, Arms" />
+
+      <SectionLabel>Equipment Access</SectionLabel>
+      <PillGroup options={LOCATIONS} value={b.location} onChange={v => set({ location: v })} />
 
       <div className="cta">
         <PrimaryButton onClick={onNext} disabled={!valid}>
