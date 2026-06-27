@@ -50,21 +50,17 @@ const saveOnboardingProfile = asyncHandler(async (req, res) => {
     updateData.upcomingEvent = data.motivationEvent; // mapped to model
     updateData.urgencyLevel = data.urgencyLevel;
   } else if (step_number === 4) {
-    if (!data.dietType || !data.foodRestrictions || data.foodRestrictions.length === 0 || !data.supplementsTaken || data.supplementsTaken.length === 0) {
+    if (!data.dietType) {
       res.status(400);
-      throw new Error('Step 4 requires dietType, foodRestrictions, and supplementsTaken');
+      throw new Error('Step 4 requires dietType');
     }
     updateData.dietType = data.dietType;
-    updateData.foodRestrictions = data.foodRestrictions;
-    updateData.supplements = data.supplementsTaken; // mapped to model
+    if (data.foodRestrictions) updateData.foodRestrictions = data.foodRestrictions;
+    if (data.supplementsTaken) updateData.supplements = data.supplementsTaken; // mapped to model
   } else if (step_number === 5) {
-    if (!data.injuries || data.injuries.length === 0 || !data.medicalConditions || data.medicalConditions.length === 0 || typeof data.exercisesToAvoid === 'undefined' || typeof data.doctorClearance === 'undefined') {
-      res.status(400);
-      throw new Error('Step 5 requires injuries, conditions, exercisesToAvoid, and doctorClearance');
-    }
-    updateData.injuries = data.injuries;
-    updateData.medicalConditions = data.medicalConditions;
-    updateData.exercisesToAvoid = data.exercisesToAvoid;
+    updateData.injuries = data.injuries || [];
+    updateData.medicalConditions = data.medicalConditions || [];
+    if (typeof data.exercisesToAvoid !== 'undefined') updateData.exercisesToAvoid = data.exercisesToAvoid;
     // doctorClearance isn't stored in User model currently, but we validate it per API doc
 
   } else {
