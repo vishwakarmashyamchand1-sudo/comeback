@@ -3,9 +3,14 @@ const { getAuth } = require('firebase-admin/auth');
 
 let serviceAccount;
 
-// If we are on Render (production), load from Environment Variable
-if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+// If we are on Render (production), build the object from individual Environment Variables
+if (process.env.FIREBASE_PROJECT_ID) {
+  serviceAccount = {
+    project_id: process.env.FIREBASE_PROJECT_ID,
+    client_email: process.env.FIREBASE_CLIENT_EMAIL,
+    // Render might escape the newlines in the private key, so we replace \\n with actual newlines
+    private_key: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined
+  };
 } else {
   // If we are on your local computer, load the file
   serviceAccount = require('./firebase-service-account.json');
