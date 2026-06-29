@@ -142,6 +142,7 @@ input, button, textarea { font-family: var(--font-ui); }
 .input::placeholder { color: var(--c-text-muted); }
 .input:focus, .input.filled { border-color: var(--c-navy); }
 .input.error { border-color: var(--c-red); }
+.input.readonly { background: var(--c-bg); color: var(--c-text-muted); cursor: not-allowed; border-color: var(--c-border); pointer-events: none; }
 
 .input-row { display: grid; gap: 8px; }
 .input-row.col2 { grid-template-columns: 1fr 1fr; }

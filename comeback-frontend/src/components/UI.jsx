@@ -53,17 +53,18 @@ export function SectionLabel({ children }) {
   return <div className="s-label">{children}</div>;
 }
 
-export function TextField({ value, onChange, placeholder, type = 'text', error, hint, hintOk, style, autoComplete }) {
+export function TextField({ value, onChange, placeholder, type = 'text', error, hint, hintOk, style, autoComplete, readOnly }) {
   return (
     <div>
       <input
-        className={`input ${value ? 'filled' : ''} ${error ? 'error' : ''}`}
+        className={`input ${value ? 'filled' : ''} ${error ? 'error' : ''} ${readOnly ? 'readonly' : ''}`}
         type={type}
         value={value}
         placeholder={placeholder}
-        onChange={e => onChange(e.target.value)}
+        onChange={e => onChange && onChange(e.target.value)}
         style={style}
         autoComplete={autoComplete}
+        readOnly={readOnly}
       />
       {error
         ? <div className="err-text"><i className="ti ti-alert-circle" /> {error}</div>

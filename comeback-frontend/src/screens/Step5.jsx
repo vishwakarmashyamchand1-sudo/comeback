@@ -12,7 +12,7 @@ const INJURIES = [
   { id: 'Shoulder',          icon: 'hand-stop' },
   { id: 'Elbow / wrist',     icon: 'arm' },
   { id: 'Neck',              icon: 'e-passport' },
-  { id: 'None' }, // Add this!
+  { id: 'None',              icon: 'mood-smile' }, 
 ];
 const CONDITIONS = [
   { id: 'Diabetes (Type 1 or 2)' },

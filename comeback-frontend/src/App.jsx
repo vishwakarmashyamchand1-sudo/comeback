@@ -121,11 +121,10 @@ export default function App() {
     screen = <Auth />;
   }
 
-  const dark = step === 'generating' || !state.isAuthenticated;
+  const dark = step === 'generating';
 
   return (
     <div className="app-shell" style={dark ? { background: '#1A1A2E' } : undefined}>
-      {!dark && <StatusBar />}
       {screen}
     </div>
   );

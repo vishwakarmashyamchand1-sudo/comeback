@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useReducer } from 'react';
 import { auth } from './firebase.js';
-import { onIdTokenChanged } from 'firebase/auth';
+import { onIdTokenChanged, signOut } from 'firebase/auth';
 
 const STORAGE_KEY = 'comeback.onboarding.v1';
 
@@ -20,7 +20,8 @@ function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return initial;
-    return { ...initial, ...JSON.parse(raw) };
+    const saved = JSON.parse(raw);
+    return { ...initial, ...saved, isAuthenticated: false }; // Force login screen on every refresh
   } catch { return initial; }
 }
 
@@ -33,12 +34,26 @@ function reducer(state, action) {
     case 'toggle': {
       // toggle a value in an array field within a slice
       const arr = state[action.slice][action.field];
-      const next = arr.includes(action.value)
-        ? arr.filter(v => v !== action.value)
-        : [...arr, action.value];
+      let next;
+      if (action.value === 'None') {
+        // If user clicks "None", clear everything else and just toggle "None"
+        next = arr.includes('None') ? [] : ['None'];
+      } else {
+        // If user clicks something else, remove "None" first, then toggle normally
+        const withoutNone = arr.filter(v => v !== 'None');
+        next = withoutNone.includes(action.value)
+          ? withoutNone.filter(v => v !== action.value)
+          : [...withoutNone, action.value];
+      }
       return { ...state, [action.slice]: { ...state[action.slice], [action.field]: next } };
     }
-    case 'login_success': return { ...state, isAuthenticated: true, token: action.token };
+    case 'login_success': 
+      return { 
+        ...state, 
+        isAuthenticated: true, 
+        token: action.token,
+        profile: { ...state.profile, name: action.user?.name || state.profile.name }
+      };
     case 'next':  return { ...state, step: action.step, dir: 'fwd' };
     case 'back':  return { ...state, step: action.step, dir: 'back' };
     case 'reset': return { ...initial };
@@ -58,6 +73,9 @@ export function OnboardingProvider({ children }) {
 
   // Listen to Firebase token refreshes in the background!
   useEffect(() => {
+    // Force sign out on every refresh to guarantee the login screen shows first
+    signOut(auth).catch(() => {});
+    
     const unsub = onIdTokenChanged(auth, async (user) => {
       if (user) {
         // Firebase automatically gets a fresh token right before the old one expires

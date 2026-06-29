@@ -36,7 +36,7 @@ export default function Step2({ onNext, onBack, onSkip, dir }) {
           selected={b.level === l.id} onClick={() => set({ level: l.id })} />
       ))}
 
-      <SectionLabel>Last active (approx.)</SectionLabel>
+      <SectionLabel>Last active (optional)</SectionLabel>
       <PillGroup options={LAST} value={b.lastActive} onChange={v => set({ lastActive: v })} />
 
       <SectionLabel>Where will you work out?</SectionLabel>

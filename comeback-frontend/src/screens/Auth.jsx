@@ -6,11 +6,11 @@ import { PrimaryButton, TextField, StepIntro } from '../components/UI.jsx';
 
 export default function Auth() {
   const { dispatch } = useOnboarding();
-  const [isLogin, setIsLogin] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState(''); // NEW: Name state
+  const [name, setName] = useState(''); 
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -66,8 +66,8 @@ export default function Auth() {
       }
 
       // Backend returns isNewUser flag on register, or onboardingComplete on /me. 
-      // In this setup, we just mark auth as success and app will render Step 1
-      dispatch({ type: 'login_success', token });
+      const userData = isLogin ? data.user : data.data;
+      dispatch({ type: 'login_success', token, user: userData });
 
     } catch (err) {
       setError(err.message || 'Something went wrong');
@@ -81,7 +81,7 @@ export default function Auth() {
       <div style={{ marginTop: '20px', marginBottom: '30px' }}>
         <div className="wordmark">
           <span className="come">COME</span>
-          <span className="back" style={{ color: '#fff' }}>BACK</span>
+          <span className="back" style={{ color: 'var(--c-navy)' }}>BACK</span>
         </div>
       </div>
 
