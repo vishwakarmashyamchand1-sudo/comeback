@@ -8,6 +8,7 @@ import Step4 from './screens/Step4.jsx';
 import Step5 from './screens/Step5.jsx';
 import Generating from './screens/Generating.jsx';
 import Auth from './screens/Auth.jsx';
+import { API_URL } from './lib/api.js';
 
 export default function App() {
   const { state, dispatch } = useOnboarding();
@@ -66,7 +67,7 @@ export default function App() {
             };
           }
 
-          await fetch('/api/onboarding/profile', {
+          await fetch(`${API_URL}/api/onboarding/profile`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
@@ -77,7 +78,7 @@ export default function App() {
         }
         
         if (step === 5) {
-          await fetch('/api/onboarding/complete', {
+          await fetch(`${API_URL}/api/onboarding/complete`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
