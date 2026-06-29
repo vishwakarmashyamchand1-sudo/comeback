@@ -3,6 +3,7 @@ import { useOnboarding } from '../lib/store.jsx';
 import { auth } from '../lib/firebase.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { PrimaryButton, TextField, StepIntro } from '../components/UI.jsx';
+import { API_URL } from '../lib/api.js';
 
 export default function Auth() {
   const { dispatch } = useOnboarding();
@@ -37,7 +38,7 @@ export default function Auth() {
 
       if (isLogin) {
         // If logging in, just fetch their existing profile!
-        res = await fetch('/api/auth/me', {
+        res = await fetch(`${API_URL}/api/auth/me`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -45,7 +46,7 @@ export default function Auth() {
         });
       } else {
         // If signing up, hit the register endpoint with their Name
-        res = await fetch('/api/auth/register', {
+        res = await fetch(`${API_URL}/api/auth/register`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

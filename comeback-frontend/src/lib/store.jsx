@@ -11,7 +11,7 @@ const initial = {
   dir: 'fwd',         // transition direction
   profile:    { name: '', gender: '', dob: { d: '', m: '', y: '' }, heightCm: '', weightKg: '', targetWeight: '', targetDate: '' },
   background: { level: '', lastActive: '', daysPerWeek: '', time: '', location: '', strongest: '', weakest: '' },
-  goal:       { goal: '', targetWeight: '', targetDate: '', event: '', urgency: '' },
+  goal:       { goal: '', event: '', urgency: '' },
   diet:       { type: '', restrictions: [], supplements: [] },
   health:     { injuries: [], conditions: [], avoid: '' },
 };
