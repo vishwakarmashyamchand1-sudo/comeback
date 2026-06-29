@@ -80,11 +80,11 @@ export function OnboardingProvider({ children }) {
       if (user) {
         // Firebase automatically gets a fresh token right before the old one expires
         const freshToken = await user.getIdToken();
-        dispatch({ type: 'login_success', token: freshToken, user: { name: state.profile.name } });
+        dispatch({ type: 'login_success', token: freshToken });
       }
     });
     return unsub;
-  }, [state.profile.name]);
+  }, []);
 
   return <Ctx.Provider value={{ state, dispatch }}>{children}</Ctx.Provider>;
 }
