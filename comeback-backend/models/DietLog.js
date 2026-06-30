@@ -17,6 +17,8 @@ const FoodItemSchema = new mongoose.Schema({
 const MealSchema = new mongoose.Schema({
   mealType:   { type: String, enum: ['breakfast','lunch','snack','dinner'], required: true },
   loggedAt:   { type: Date, default: Date.now },
+  foodPhotoUrl: { type: String }, // Cloudflare R2 or S3 public URL
+  rawClaudeAnalysis: { type: String }, // Raw JSON text from Claude Vision API
   items:      [FoodItemSchema],   // AI-detected and user-confirmed items
   totalCalories: { type: Number, default: 0 },
   totalProteinG: { type: Number, default: 0 },

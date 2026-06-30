@@ -17,9 +17,12 @@ const WorkoutExerciseSchema = new mongoose.Schema({
   exerciseName: { type: String, required: true },  // denormalised for speed
   muscleGroup:  { type: String },
   sets:         [SetSchema],
+  isCompleted:  { type: Boolean, default: false }, // true when user finishes all sets
   wasSkipped:   { type: Boolean, default: false },
   skipReason:   { type: String },
   addedByUser:  { type: Boolean, default: false }, // true = user added, not AI planned
+  claudeReasoning:{ type: String }, // AI explanation for why this exercise was added
+  benefits:       { type: String }, // AI explanation of the benefits
   userNotes:    { type: String },
   orderIndex:   { type: Number }, // display order in the workout table
 }, { _id: false });

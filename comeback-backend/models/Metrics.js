@@ -11,6 +11,13 @@ const MetricSchema = new mongoose.Schema({
   weightKg:      { type: Number },  // Monday check-in
   weightDeltaKg: { type: Number },  // vs last week (negative = lost weight)
   bmi:           { type: Number },  // calculated: weight / (height/100)^2
+  progressPhotoUrl: { type: String }, // User's weekly progress photo
+  measurements: {
+    chestCm: { type: Number },
+    waistCm: { type: Number },
+    armsCm:  { type: Number },
+    legsCm:  { type: Number }
+  },
 
   // ── Weekly Workout Stats ──────────────────────
   sessionsCompleted: { type: Number, default: 0 },
