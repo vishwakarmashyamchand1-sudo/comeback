@@ -57,6 +57,9 @@ function reducer(state, action) {
     case 'next':  return { ...state, step: action.step, dir: 'fwd' };
     case 'back':  return { ...state, step: action.step, dir: 'back' };
     case 'reset': return { ...initial };
+    case 'logout': 
+      try { localStorage.removeItem(STORAGE_KEY); } catch(e){}
+      return { ...initial };
     default: return state;
   }
 }

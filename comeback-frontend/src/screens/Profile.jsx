@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import { useOnboarding } from '../lib/store.jsx';
+import { auth } from '../lib/firebase.js';
+import { signOut } from 'firebase/auth';
 
 export default function Profile({ navigateTo }) {
+  const { dispatch } = useOnboarding();
   const [reminders, setReminders] = useState(true);
   const [mealReminders, setMealReminders] = useState(true);
   const [metricUnits, setMetricUnits] = useState(false);
@@ -61,7 +65,10 @@ export default function Profile({ navigateTo }) {
         <button 
           className="btn btn-outline btn-block" 
           style={{ marginTop: '20px', borderColor: 'var(--danger)', color: 'var(--danger)' }} 
-          onClick={() => alert('Logged out')}
+          onClick={async () => {
+            try { await signOut(auth); } catch (e) {}
+            dispatch({ type: 'logout' });
+          }}
         >
           Log Out
         </button>

@@ -618,3 +618,25 @@ button{font-family:var(--font-body); cursor:pointer; border:none; outline:none; 
 .muted{color:var(--muted);}
 .toast{position:fixed; bottom:96px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--navy); color:var(--white); padding:12px 20px; border-radius:14px; font-size:13px; font-weight:600; opacity:0; transition:.3s; z-index:300; box-shadow:var(--shadow-lg); white-space:nowrap;}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+/* =================== Exercise Library =================== */
+.lib-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 10px; }
+@media (min-width: 400px) {
+  .lib-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+}
+.lib-card { background: var(--white); border-radius: 18px; padding: 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; transition: transform 0.15s; }
+.lib-card:active { transform: scale(0.98); }
+.lib-img-wrap { position: relative; width: 100%; aspect-ratio: 1; border-radius: 14px; background: linear-gradient(135deg, #f0f2e6, #e4e8d3); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.lib-gif { width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; }
+.lib-badge { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.9); font-size: 10.5px; font-weight: 700; color: var(--navy); padding: 4px 10px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); backdrop-filter: blur(4px); }
+.lib-name { font-size: 14.5px; font-weight: 700; color: var(--navy); line-height: 1.3; }
+
+/* Skeleton */
+.skeleton-card { border: 1.5px solid var(--line); box-shadow: none; }
+.skeleton { background: linear-gradient(90deg, #E9E9E5 25%, #F5F5F3 50%, #E9E9E5 75%); background-size: 200% 100%; animation: loading 1.5s infinite linear; border-radius: 8px; }
+.skel-img { width: 100%; aspect-ratio: 1; border-radius: 14px; }
+.skel-text { height: 14px; }
+@keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* Empty state */
+.empty-state { padding: 60px 20px; text-align: center; color: var(--muted); font-size: 14.5px; font-weight: 500; display: flex; flex-direction: column; align-items: center; }

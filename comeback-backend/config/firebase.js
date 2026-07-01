@@ -14,7 +14,7 @@ if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && proc
   };
 } else {
   // If we are on your local computer, load the existing service-account JSON file
-  const localServiceAccountPath = path.resolve(__dirname, 'firebase-service-account.json');
+  const localServiceAccountPath = path.resolve(__dirname, '../serviceAccountKey.json');
   serviceAccount = require(localServiceAccountPath);
 }
 

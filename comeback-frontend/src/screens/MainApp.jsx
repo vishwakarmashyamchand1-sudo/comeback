@@ -6,6 +6,7 @@ import DietTracker from './DietTracker.jsx';
 import CoachChat from './CoachChat.jsx';
 import Progress from './Progress.jsx';
 import Profile from './Profile.jsx';
+import ExerciseLibrary from './ExerciseLibrary.jsx';
 
 export default function MainApp() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -19,6 +20,7 @@ export default function MainApp() {
       
       {/* Current Screen Rendering */}
       {activeTab === 'dashboard' && <Dashboard navigateTo={navigateTo} />}
+      {activeTab === 'library' && <ExerciseLibrary navigateTo={navigateTo} />}
       
       {activeTab === 'workout' && <WorkoutList navigateTo={navigateTo} />}
       {activeTab === 'active-workout' && <ActiveWorkout navigateTo={navigateTo} />}
@@ -36,6 +38,14 @@ export default function MainApp() {
           >
             <div className="nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></div>
             <span>Home</span>
+          </button>
+
+          <button 
+            className={`nav-item ${activeTab === 'library' ? 'active' : ''}`} 
+            onClick={() => navigateTo('library')}
+          >
+            <div className="nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5v-15A2.5 2.5 0 016.5 2H20v20H6.5a2.5 2.5 0 01-2.5-2.5z"/></svg></div>
+            <span>Library</span>
           </button>
 
           <button 
