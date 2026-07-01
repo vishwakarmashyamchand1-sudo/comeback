@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
+const { generateWeek1Plan } = require('../services/planGenerationService');
 
 /**
  * @desc    Save onboarding profile data step by step
@@ -147,46 +148,77 @@ const completeOnboarding = asyncHandler(async (req, res) => {
   await user.save();
 
   // 6. Generate 7-Day Workout Plan (Steps 20, 21, 22 from the Sir's doc)
-  // Because Claude AI is not connected yet, we are using the "Hardcoded Fallback Plan" 
-  // exactly like your Sir's Important Notes requested!
-  
   await Workout.deleteMany({ userId: user._id, weekNumber: 1 }); // Clear any old tests
 
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const weekPlan = [];
+  let weekPlan = [];
+  let coachNote = `Welcome to the app! I've calculated your calories at ${user.dailyCalorieTarget} kcal. Let's crush Week 1!`;
 
-  for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setUTCHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + i);
+  try {
+    const generatedWeek = await generateWeek1Plan(user, baselineLifts);
     
-    // We create a dummy fallback workout for now. Later Claude will inject real exercises here.
-    const isRestDay = (i % 2 !== 0); // Alternate rest days
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setUTCHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + i);
+      
+      const dayData = generatedWeek[i];
+      const isRestDay = dayData ? dayData.isRestDay : (i % 2 !== 0);
+      
+      const workoutDoc = await Workout.create({
+        userId: user._id,
+        date: d,
+        weekNumber: 1,
+        dayOfWeek: days[d.getDay()],
+        sessionType: dayData ? dayData.sessionType : (isRestDay ? 'Rest' : 'Full Body'),
+        status: isRestDay ? 'rest_day' : 'planned',
+        exercises: dayData ? dayData.exercises : [],
+        planSource: 'ai_generated'
+      });
+      weekPlan.push(workoutDoc);
+    }
     
-    const workoutDoc = await Workout.create({
-      userId: user._id,
-      date: d,
-      weekNumber: 1,
-      dayOfWeek: days[d.getDay()],
-      sessionType: isRestDay ? 'Rest' : 'Full Body',
-      status: isRestDay ? 'rest_day' : 'planned',
-      exercises: [], // Fallback has no exercises yet
-      planSource: 'ai_generated'
-    });
-    
-    weekPlan.push(workoutDoc);
-  }
-
-  // 7. Return the exact response format (Step 25 from the Sir's doc)
     // 7. Return the exact response format (Step 25 from the Sir's doc)
-  // Simulating a Claude Failure by returning a 500 Status Code with the fallback data
-  res.status(500).json({
-    success: false,
-    message: "Claude API failed. Returning fallback template plan.",
-    weekPlan: weekPlan,
-    user: user,
-    coachNote: `Welcome to the app! I've calculated your calories at ${user.dailyCalorieTarget} kcal. Let's crush Week 1!`
-  });
+    return res.status(200).json({
+      success: true,
+      message: "Week 1 plan generated successfully",
+      weekPlan: weekPlan,
+      user: user,
+      coachNote: coachNote
+    });
+
+  } catch (error) {
+    console.error("AI Generation failed, using fallback:", error);
+    
+    // Fallback logic
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setUTCHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + i);
+      
+      const isRestDay = (i % 2 !== 0);
+      
+      const workoutDoc = await Workout.create({
+        userId: user._id,
+        date: d,
+        weekNumber: 1,
+        dayOfWeek: days[d.getDay()],
+        sessionType: isRestDay ? 'Rest' : 'Full Body',
+        status: isRestDay ? 'rest_day' : 'planned',
+        exercises: [],
+        planSource: 'ai_generated'
+      });
+      weekPlan.push(workoutDoc);
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Claude API failed. Returning fallback template plan.",
+      weekPlan: weekPlan,
+      user: user,
+      coachNote: coachNote
+    });
+  }
 });
 
 /**

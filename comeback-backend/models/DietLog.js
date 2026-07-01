@@ -18,7 +18,7 @@ const MealSchema = new mongoose.Schema({
   mealType:   { type: String, enum: ['breakfast','lunch','snack','dinner'], required: true },
   loggedAt:   { type: Date, default: Date.now },
   foodPhotoUrl: { type: String }, // Cloudflare R2 or S3 public URL
-  rawClaudeAnalysis: { type: String }, // Raw JSON text from Claude Vision API
+  rawAntigravityAnalysis: { type: String }, // Raw JSON text from Antigravity Vision API
   items:      [FoodItemSchema],   // AI-detected and user-confirmed items
   totalCalories: { type: Number, default: 0 },
   totalProteinG: { type: Number, default: 0 },
@@ -44,7 +44,7 @@ const DietLogSchema = new mongoose.Schema({
   waterGlasses:  { type: Number, default: 0 },
 
   // ── Daily Coach Tip ───────────────────────────
-  dailyCoachTip:     { type: String },   // Claude Call 07
+  dailyCoachTip:     { type: String },   // Antigravity Call 07
   dailyTipGeneratedAt: { type: Date },
 
 }, { timestamps: true });

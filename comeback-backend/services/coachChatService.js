@@ -1,89 +1,93 @@
 const crypto = require('crypto');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { generateWorkoutPlan } = require('./planGenerationService');
 
-/**
- * Temporary In-Memory Storage for Pending Plans
- * Since Redis is not installed, we use a Map.
- * Key: pendingPlanId
- * Value: { plan: Array, expiresAt: Date }
- */
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'mock_key');
+
 const pendingPlans = new Map();
 
 /**
  * Service: Coach Chat
  * Purpose: Handles conversational queries from the user acting as an AI Coach
  */
-const handleUserQuery = async (query, userContext, conversationHistory, intent) => {
-  // 1. Build context (Mocking this step for now)
-  console.log(`Building context for user ${userContext._id}...`);
-  console.log(`Conversation history length: ${conversationHistory?.length || 0}`);
-
-  let replyText = "I am your AI coach. How can I help you today?";
+const handleUserQuery = async (query, userContextString, conversationHistory, intent) => {
+  let replyText = "";
   let pendingPlanId = null;
   let simulatedPlan = null;
 
-  // 2. Mocking Call 08 Claude API Logic
   if (intent === 'modify_tomorrow') {
-    // Simulate detecting a workout plan JSON block from Claude's response
-    replyText = "I've modified tomorrow's workout to accommodate your shoulder pain. Here is the updated plan for you to review.";
-    
-    simulatedPlan = [
-      {
-        "exerciseId": "60d5ecb8b392d700153c3000", // Mock ID, frontend should ideally send actual valid ObjectIds if it knows them, or backend resolves. We will just pass it through.
-        "exerciseName": "Light Dumbbell Press",
-        "muscleGroup": "Shoulders",
-        "orderIndex": 1,
-        "sets": [
-          { "setNumber": 1, "plannedReps": 15, "plannedWeight": 5 },
-          { "setNumber": 2, "plannedReps": 15, "plannedWeight": 5 }
-        ]
-      }
-    ];
+    // 1. If they ask to change the workout, we use Step 5's logic!
+    replyText = "I've modified tomorrow's workout to accommodate your request. Here is the updated plan for you to review.";
+    simulatedPlan = await generateWorkoutPlan(userContextString);
 
-    // 3. Store temporarily with a 30-min TTL
     pendingPlanId = crypto.randomBytes(8).toString('hex');
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); 
     
     pendingPlans.set(pendingPlanId, {
       plan: simulatedPlan,
       expiresAt
     });
 
-    // Cleanup expired plans periodically (simple garbage collection)
-    for (const [key, value] of pendingPlans.entries()) {
-      if (value.expiresAt < new Date()) {
-        pendingPlans.delete(key);
-      }
-    }
   } else {
-    // Normal conversational response
-    replyText = `You said: "${query}". (This is a mock response from the Coach AI).`;
+    // 2. Open-Ended Chat with Gemini
+    console.log('[Antigravity Chat] Sending user query to Gemini...');
+
+    // Format previous messages for Gemini. Gemini expects 'user' or 'model'.
+    const formattedHistory = (conversationHistory || []).map(msg => ({
+      role: msg.role === 'ai' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    }));
+
+    try {
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-2.5-flash",
+        systemInstruction: `You are Comeback, a friendly, gentle, and highly encouraging personal fitness coach. 
+        You are talking to your client right now.
+        
+        RULES:
+        1. Always keep your answers extremely concise (under 3 or 4 sentences). The user might be at the gym and reading this quickly.
+        2. Be extremely supportive and understanding. Praise their efforts and gently guide them back on track if they slip up.
+        3. ALWAYS review their Context below before answering so you know their injuries, goals, and history.
+        
+        USER CONTEXT:
+        ${userContextString}`
+      });
+
+      const chat = model.startChat({
+        history: formattedHistory
+      });
+
+      const result = await chat.sendMessage(query);
+      replyText = result.response.text().trim();
+    } catch (error) {
+      console.error("[Antigravity Chat Error]:", error);
+      replyText = "I'm having a little trouble connecting right now, but I'm here for you! Let's try again in a moment.";
+    }
+  }
+
+  // Cleanup expired plans
+  for (const [key, value] of pendingPlans.entries()) {
+    if (value.expiresAt < new Date()) {
+      pendingPlans.delete(key);
+    }
   }
 
   return { 
     reply: replyText,
-    workoutPlanJson: intent === 'modify_tomorrow' ? simulatedPlan : null,
+    workoutPlanJson: simulatedPlan,
     pendingPlanId
   };
 };
 
-/**
- * Retrieve and validate a pending plan
- */
 const getPendingPlan = (planId) => {
   const data = pendingPlans.get(planId);
-  if (!data) return null;
-  
-  if (data.expiresAt < new Date()) {
+  if (!data || data.expiresAt < new Date()) {
     pendingPlans.delete(planId);
     return null;
   }
-  
   return data.plan;
 };
 
-/**
- * Clear a pending plan
- */
 const clearPendingPlan = (planId) => {
   pendingPlans.delete(planId);
 };

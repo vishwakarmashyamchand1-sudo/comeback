@@ -2,6 +2,8 @@ const asyncHandler = require('express-async-handler');
 const mongoose = require('mongoose');
 const Workout = require('../models/Workout');
 const Exercise = require('../models/Exercise');
+const { generateTomorrowPlan } = require('../services/planGenerationService');
+const { buildUserContext } = require('../services/contextBuilder');
 
 /**
  * @desc    1. Create today's workout
@@ -710,16 +712,53 @@ const completeWorkout = asyncHandler(async (req, res) => {
   }
   await metric.save();
 
-  // 6. Steps 49, 50, 51: Call Claude API (MOCK FAILURE)
-  // Because Claude is not connected yet, we trigger the Red 500 Error Response exactly as the Sir requested.
-  res.status(500).json({
-    success: false,
-    message: "Summary unavailable",
-    workout: workout,
-    aiSummary: null,
-    tomorrowPlan: null,
-    newPRs: newPRs
-  });
+  // 6. Steps 48, 49, 50, 51: Call Antigravity API
+  try {
+    const targetDate = new Date(); // today
+    const contextPayload = await buildUserContext(user._id, targetDate);
+    const aiResponse = await generateTomorrowPlan(contextPayload);
+    
+    // Save summary to today's workout
+    workout.aiSummary = aiResponse.summary;
+    await workout.save();
+
+    // Create tomorrow's plan
+    const tomorrowDate = new Date();
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    tomorrowDate.setUTCHours(0, 0, 0, 0);
+
+    // Overwrite existing plan if it exists
+    await Workout.deleteMany({ userId: user._id, date: tomorrowDate });
+
+    const tomorrowPlan = await Workout.create({
+      userId: user._id,
+      date: tomorrowDate,
+      weekNumber: workout.weekNumber, // Keep same week
+      dayOfWeek: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][tomorrowDate.getDay()],
+      sessionType: aiResponse.tomorrow.sessionType,
+      status: aiResponse.tomorrow.isRestDay ? 'rest_day' : 'planned',
+      exercises: aiResponse.tomorrow.exercises || [],
+      planSource: 'ai_generated'
+    });
+
+    res.status(200).json({
+      workout: workout,
+      aiSummary: aiResponse.summary,
+      tomorrowPlan: tomorrowPlan,
+      newPRs: newPRs
+    });
+
+  } catch (error) {
+    console.error("Failed to generate tomorrow plan:", error);
+    res.status(500).json({
+      success: false,
+      message: "Summary unavailable",
+      workout: workout,
+      aiSummary: null,
+      tomorrowPlan: null,
+      newPRs: newPRs
+    });
+  }
 });
 
 module.exports = {

@@ -8,6 +8,7 @@ import Step4 from './screens/Step4.jsx';
 import Step5 from './screens/Step5.jsx';
 import Generating from './screens/Generating.jsx';
 import Auth from './screens/Auth.jsx';
+import MainApp from './screens/MainApp.jsx';
 import { API_URL } from './lib/api.js';
 
 export default function App() {
@@ -106,8 +107,10 @@ export default function App() {
   let screen;
   if (step === 'generating') {
     screen = done
-      ? <PlanReady onRestart={() => { dispatch({ type: 'reset' }); setDone(false); }} />
+      ? <PlanReady onRestart={() => { dispatch({ type: 'reset' }); setDone(false); }} onContinue={() => dispatch({ type: 'next', step: 'dashboard' })} />
       : <Generating onDone={() => setDone(true)} />;
+  } else if (step === 'dashboard') {
+    return <MainApp />;
   } else {
     screen = {
       1: <Step1 {...props} />,
@@ -132,7 +135,7 @@ export default function App() {
 }
 
 // Lightweight success state shown after the generating animation.
-function PlanReady({ onRestart }) {
+function PlanReady({ onRestart, onContinue }) {
   const { state } = useOnboarding();
   const name = state.profile.name || 'there';
   return (
@@ -147,7 +150,7 @@ function PlanReady({ onRestart }) {
       <div className="gen-title">Your plan is ready, {name}</div>
       <div className="gen-sub">12-week comeback plan · 4 days / week<br />Tailored to your goals, gym and health.</div>
       <div style={{ width: '100%', marginTop: 8 }}>
-        <button className="btn btn-lime" onClick={() => alert('→ Navigate to the dashboard (next module).')}>
+        <button className="btn btn-lime" onClick={onContinue}>
           Let's go <i className="ti ti-arrow-right btn-icon" />
         </button>
         <button className="btn" style={{ marginTop: 10, background: 'transparent', color: '#8A8AAA', borderColor: '#ffffff1A' }} onClick={onRestart}>
