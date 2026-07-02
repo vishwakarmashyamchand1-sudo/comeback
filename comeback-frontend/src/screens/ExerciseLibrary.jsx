@@ -40,8 +40,10 @@ export default function ExerciseLibrary({ navigateTo }) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
-  const [selectedExercise, setSelectedExercise] = useState(null);
   
+  const [selectedExercise, setSelectedExercise] = useState(null);
+  const [fullExerciseDetails, setFullExerciseDetails] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 400); // 400ms debounce
@@ -130,6 +132,32 @@ export default function ExerciseLibrary({ navigateTo }) {
     }
   }, [state.token, debouncedSearch, activeFilter, activeEquipment, activeGoal, page]);
 
+  const handleCardClick = async (ex) => {
+    setSelectedExercise(ex);
+    setFullExerciseDetails(null);
+    setModalLoading(true);
+    
+    try {
+      const id = ex._id || ex.sourceId;
+      const res = await fetch(`${API_URL}/api/exercises/${id}`, {
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFullExerciseDetails(data.exercise);
+      }
+    } catch (err) {
+      console.error("Failed to fetch full exercise details:", err);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    setSelectedExercise(null);
+    setFullExerciseDetails(null);
+  };
+
   return (
     <div className="screen active" style={{ display: 'flex' }}>
       <div className="page-head">
@@ -138,7 +166,6 @@ export default function ExerciseLibrary({ navigateTo }) {
       
       <div className="pad" style={{ paddingBottom: '100px', width: '100%' }}>
         
-        {/* Search */}
         <div style={{ marginBottom: '16px' }}>
           <TextField 
             value={search} 
@@ -180,7 +207,6 @@ export default function ExerciseLibrary({ navigateTo }) {
           </div>
         </div>
 
-        {/* States */}
         {error && (
           <div className="empty-state">
             <i className="ti ti-alert-circle" style={{ fontSize: 40, color: 'var(--c-red)', marginBottom: 12 }}></i>
@@ -211,7 +237,7 @@ export default function ExerciseLibrary({ navigateTo }) {
           <>
             <div className="lib-grid">
               {exercises.map((ex, idx) => (
-                <div key={`${ex._id || ex.sourceId}-${idx}`} className="lib-card">
+                <div key={`${ex._id || ex.sourceId}-${idx}`} className="lib-card" onClick={() => handleCardClick(ex)}>
                   <div className="lib-img-wrap">
                     <img src={ex.gifUrl} alt={ex.name} className="lib-gif" loading="lazy" />
                     <div className="lib-badge">{ex.uiMuscle}</div>
@@ -240,18 +266,19 @@ export default function ExerciseLibrary({ navigateTo }) {
         )}
       </div>
       
-      {/* Modal Overlay */}
       {selectedExercise && (
-        <div className="exercise-modal-overlay" onClick={() => setSelectedExercise(null)}>
+        <div className="exercise-modal-overlay" onClick={closeModal}>
           <div className="exercise-modal-content" onClick={e => e.stopPropagation()}>
-            <button className="close-btn" onClick={() => setSelectedExercise(null)}>&times;</button>
             <div className="modal-gif-wrap">
+              <button className="modal-back-btn" onClick={closeModal}>
+                <i className="ti ti-arrow-left"></i> Back
+              </button>
               <img src={selectedExercise.gifUrl} alt={selectedExercise.name} className="modal-gif" loading="lazy" />
             </div>
-            <div className="modal-info">
+            <div className="modal-info" style={{ overflowY: 'auto', maxHeight: '50vh' }}>
               <h2 className="modal-title">{selectedExercise.name}</h2>
-              <p className="modal-why">{selectedExercise.whyLabel || 'Great exercise for building strength and endurance.'}</p>
-              <div className="modal-tags">
+              
+              <div className="modal-tags" style={{ marginBottom: '16px' }}>
                 <span className="modal-badge muscle">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5v-15A2.5 2.5 0 016.5 2H20v20H6.5a2.5 2.5 0 01-2.5-2.5z"/></svg>
                   {selectedExercise.uiMuscle}
@@ -261,6 +288,47 @@ export default function ExerciseLibrary({ navigateTo }) {
                   {selectedExercise.equipment}
                 </span>
               </div>
+
+              {modalLoading && (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+                  <div className="spinner"></div>
+                </div>
+              )}
+
+              {!modalLoading && fullExerciseDetails && (
+                <div className="modal-details" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {fullExerciseDetails.whyLabel && (
+                    <p className="modal-why" style={{ margin: 0 }}><strong>Why do it?</strong> {fullExerciseDetails.whyLabel}</p>
+                  )}
+                  
+                  {fullExerciseDetails.targetMuscle && (
+                    <div>
+                      <strong style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--muted)' }}>Target Muscle</strong>
+                      <p style={{ margin: '4px 0 0 0', textTransform: 'capitalize' }}>{fullExerciseDetails.targetMuscle}</p>
+                    </div>
+                  )}
+
+                  {fullExerciseDetails.secondaryMuscles && fullExerciseDetails.secondaryMuscles.length > 0 && (
+                    <div>
+                      <strong style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--muted)' }}>Secondary Muscles</strong>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+                        {fullExerciseDetails.secondaryMuscles.map(m => (
+                          <span key={m} style={{ background: '#f0f0f0', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', textTransform: 'capitalize' }}>{m}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {fullExerciseDetails.instructionsEn && (
+                    <div>
+                      <strong style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--muted)' }}>Instructions</strong>
+                      <p style={{ fontSize: '14px', lineHeight: 1.5, margin: '6px 0 0 0', color: 'var(--navy)' }}>
+                        {fullExerciseDetails.instructionsEn}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
