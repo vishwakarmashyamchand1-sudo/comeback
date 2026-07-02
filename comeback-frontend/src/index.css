@@ -629,10 +629,7 @@ button{font-family:var(--font-body); cursor:pointer; border:none; outline:none; 
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
 /* =================== Exercise Library =================== */
-.lib-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 10px; }
-@media (min-width: 400px) {
-  .lib-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
-}
+.lib-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
 .lib-card { background: var(--white); border-radius: 18px; padding: 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; transition: transform 0.15s; }
 .lib-card:active { transform: scale(0.98); }
 .lib-img-wrap { position: relative; width: 100%; aspect-ratio: 1; border-radius: 14px; background: linear-gradient(135deg, #f0f2e6, #e4e8d3); overflow: hidden; display: flex; align-items: center; justify-content: center; }
