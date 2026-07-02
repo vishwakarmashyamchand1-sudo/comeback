@@ -64,13 +64,7 @@ export default function MainApp() {
             <span>Diet</span>
           </button>
 
-          <button 
-            className={`nav-item ${activeTab === 'coach' ? 'active' : ''}`} 
-            onClick={() => navigateTo('coach')}
-          >
-            <div className="nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 01-9 8.4A8.5 8.5 0 113 11.5 8.38 8.38 0 0111.5 3a8.5 8.5 0 019.5 8.5z"/></svg></div>
-            <span>Coach</span>
-          </button>
+
           
           <button 
             className={`nav-item ${activeTab === 'progress' ? 'active' : ''}`} 
@@ -88,6 +82,37 @@ export default function MainApp() {
             <span>Profile</span>
           </button>
         </div>
+      )}
+
+      {/* Floating Action Button (FAB) for AI Coach */}
+      {activeTab !== 'coach' && activeTab !== 'active-workout' && (
+        <button 
+          onClick={() => navigateTo('coach')}
+          style={{
+            position: 'fixed',
+            bottom: '90px', // Just above the bottom nav
+            right: '20px',
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--c-lime)',
+            color: 'var(--c-navy)',
+            border: 'none',
+            boxShadow: '0 4px 12px rgba(200, 242, 92, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: 1000,
+            transition: 'transform 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="28" height="28">
+            <path d="M21 11.5a8.38 8.38 0 01-9 8.4A8.5 8.5 0 113 11.5 8.38 8.38 0 0111.5 3a8.5 8.5 0 019.5 8.5z"/>
+          </svg>
+        </button>
       )}
 
     </div>

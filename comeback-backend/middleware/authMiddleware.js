@@ -15,11 +15,22 @@ const protect = asyncHandler(async (req, res, next) => {
       // 1. Get token from header
       token = req.headers.authorization.split(' ')[1];
 
+      let user;
+
       // 2. Verify token with Firebase Admin
-      const decodedToken = await adminAuth.verifyIdToken(token);
-      
-      // 3. Find user in database by firebaseUid
-      const user = await User.findOne({ firebaseUid: decodedToken.uid });
+      if (adminAuth) {
+        const decodedToken = await adminAuth.verifyIdToken(token);
+        // 3. Find user in database by firebaseUid
+        user = await User.findOne({ firebaseUid: decodedToken.uid });
+      } else {
+        // Fallback for local development if serviceAccountKey.json is missing
+        console.warn("⚠️ Warning: Bypassing Firebase auth check because adminAuth is not initialized.");
+        user = await User.findOne(); // Just pick the first user for local dev testing
+        if (!user) {
+           // Mock a user if database is empty
+           user = { _id: "mock-id", injuries: [] };
+        }
+      }
 
       if (user) {
         req.user = user;

@@ -135,3 +135,22 @@ export function PrimaryButton({ children, onClick, disabled, lime }) {
     </button>
   );
 }
+
+export function FilterDropdown({ icon, value, onChange, options, placeholder }) {
+  return (
+    <div className="filter-dropdown-wrapper">
+      {icon && <i className={`ti ti-${icon} filter-icon`} />}
+      <select 
+        className={`filter-select ${icon ? 'has-icon' : ''}`} 
+        value={value} 
+        onChange={e => onChange(e.target.value)}
+      >
+        <option value="All" disabled hidden>{placeholder || "Select..."}</option>
+        {options.map(o => (
+          <option key={o} value={o}>{o === 'All' ? `All ${placeholder ? placeholder.replace('Search ', '').replace('...', '') : ''}` : o}</option>
+        ))}
+      </select>
+      <i className="ti ti-chevron-down filter-chevron" />
+    </div>
+  );
+}

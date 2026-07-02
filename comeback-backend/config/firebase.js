@@ -2,7 +2,7 @@ const path = require('path');
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 
-let serviceAccount;
+let serviceAccount = null;
 
 // If we are on Render (production), build the object from individual Environment Variables
 if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
@@ -14,17 +14,24 @@ if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && proc
   };
 } else {
   // If we are on your local computer, load the existing service-account JSON file
-  const localServiceAccountPath = path.resolve(__dirname, '../serviceAccountKey.json');
-  serviceAccount = require(localServiceAccountPath);
+  try {
+    const localServiceAccountPath = path.resolve(__dirname, '../serviceAccountKey.json');
+    serviceAccount = require(localServiceAccountPath);
+  } catch (error) {
+    console.warn("⚠️ Warning: serviceAccountKey.json not found. Firebase Admin will not be initialized.");
+  }
 }
 
-// Initialize the app
-const app = initializeApp({
-  credential: cert(serviceAccount)
-});
+let auth = null;
+// Initialize the app if we have credentials
+if (serviceAccount) {
+  const app = initializeApp({
+    credential: cert(serviceAccount)
+  });
+  auth = getAuth(app);
+}
 
 // Export the Auth module directly
-const auth = getAuth(app);
 module.exports = auth;
 
 

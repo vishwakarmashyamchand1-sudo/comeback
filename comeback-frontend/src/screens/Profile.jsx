@@ -4,27 +4,29 @@ import { auth } from '../lib/firebase.js';
 import { signOut } from 'firebase/auth';
 
 export default function Profile({ navigateTo }) {
-  const { dispatch } = useOnboarding();
+  const { state, dispatch } = useOnboarding();
+  const p = state.profile;
+  const initial = p.name ? p.name.charAt(0).toUpperCase() : '?';
   const [reminders, setReminders] = useState(true);
   const [mealReminders, setMealReminders] = useState(true);
   const [metricUnits, setMetricUnits] = useState(false);
 
   return (
     <div className="screen active">
-      <div className="profile-head">
-        <div className="profile-avatar" id="profile-avatar">S</div>
-        <div className="profile-name" id="profile-name">Shivam</div>
-        <div className="profile-sub">Muscle Gain · Intermediate</div>
+        <div className="profile-head">
+        <div className="profile-avatar" id="profile-avatar">{initial}</div>
+        <div className="profile-name" id="profile-name">{p.name || 'User'}</div>
+        <div className="profile-sub">{state.goal.goal || 'Fitness Goal'} · {state.background.level || 'Beginner'}</div>
       </div>
       
       <div className="pad" style={{ paddingTop: '6px' }}>
         <div className="card">
-          <div className="info-row"><span className="k">Current Weight</span><span className="v">71.5 kg</span></div>
-          <div className="info-row"><span className="k">Goal Weight</span><span className="v">78 kg</span></div>
-          <div className="info-row"><span className="k">Height</span><span className="v">175 cm</span></div>
-          <div className="info-row"><span className="k">Fitness Goal</span><span className="v">Muscle Gain</span></div>
-          <div className="info-row"><span className="k">Activity Level</span><span className="v">Moderate</span></div>
-          <div className="info-row"><span className="k">Diet Preference</span><span className="v">Non Vegetarian</span></div>
+          <div className="info-row"><span className="k">Current Weight</span><span className="v">{p.weightKg || '--'} kg</span></div>
+          <div className="info-row"><span className="k">Goal Weight</span><span className="v">{p.targetWeight || '--'} kg</span></div>
+          <div className="info-row"><span className="k">Height</span><span className="v">{p.heightCm || '--'} cm</span></div>
+          <div className="info-row"><span className="k">Fitness Goal</span><span className="v">{state.goal.goal || '--'}</span></div>
+          <div className="info-row"><span className="k">Activity Level</span><span className="v">{state.background.level || '--'}</span></div>
+          <div className="info-row"><span className="k">Diet Preference</span><span className="v">{state.diet.type || '--'}</span></div>
         </div>
 
         <div className="section-title" style={{ marginTop: '4px' }}>Notifications</div>

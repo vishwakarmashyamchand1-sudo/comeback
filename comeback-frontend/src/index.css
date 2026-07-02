@@ -94,6 +94,15 @@ input, button, textarea { font-family: var(--font-ui); }
 }
 .screen::-webkit-scrollbar { display: none; }
 
+/* Utility to hide scrollbar but keep scroll functionality */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* ── Onboarding header ──────────────────────────────────── */
 .ob-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
 .back-btn {
@@ -641,7 +650,7 @@ button{font-family:var(--font-body); cursor:pointer; border:none; outline:none; 
 /* Empty state */
 .empty-state { padding: 60px 20px; text-align: center; color: var(--muted); font-size: 14.5px; font-weight: 500; display: flex; flex-direction: column; align-items: center; }
 
-/* Exercise Modal */
+
 .exercise-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; animation: fadeIn 0.2s ease-out; }
 @media (min-width: 600px) { .exercise-modal-overlay { align-items: center; } }
 .exercise-modal-content { background: var(--white); width: 100%; max-width: 500px; border-radius: 24px 24px 0 0; position: relative; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden; display: flex; flex-direction: column; }
@@ -659,3 +668,84 @@ button{font-family:var(--font-body); cursor:pointer; border:none; outline:none; 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ── Dropdown Filters (Paw Chart Style) ─────────────────── */
+.filter-row-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.filter-top-bar {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+.filter-dropdowns {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.filter-dropdowns::-webkit-scrollbar {
+  display: none;
+}
+.filter-dropdown-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 140px;
+}
+.filter-select {
+  appearance: none;
+  background: var(--c-card);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-tag);
+  padding: 8px 32px 8px 12px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--c-text-primary);
+  width: 100%;
+  cursor: pointer;
+  outline: none;
+}
+.filter-select.has-icon {
+  padding-left: 36px;
+}
+.filter-select:focus {
+  border-color: var(--c-text-muted);
+}
+.filter-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 16px;
+  color: var(--c-text-muted);
+  pointer-events: none;
+}
+.filter-chevron {
+  position: absolute;
+  right: 12px;
+  font-size: 14px;
+  color: var(--c-text-muted);
+  pointer-events: none;
+}
+.reset-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-tag);
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.reset-btn:hover {
+  background: var(--c-bg);
+  color: var(--c-text-primary);
+}
+

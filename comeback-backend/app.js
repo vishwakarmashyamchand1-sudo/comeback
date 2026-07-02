@@ -31,7 +31,8 @@ app.use(express.urlencoded({ extended: false }));
 
 // Security Layer (Phase 15)
 app.use(helmet());
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
+// Increased rate limit to 5000 for local development (was 100)
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5000 });
 app.use('/api', limiter);
 
 // Global Logger (Phase 16)

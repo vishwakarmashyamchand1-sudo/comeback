@@ -1,9 +1,13 @@
+import { useOnboarding } from '../lib/store.jsx';
 import React from 'react';
 
 export default function Dashboard({ navigateTo }) {
-  // We'll mock the user data for now until API is connected
-  const userName = "Shivam";
-  const streakDays = 12;
+  const { state } = useOnboarding();
+  const userName = state.profile?.name || "User";
+  const initial = userName.charAt(0).toUpperCase();
+  const currentGoal = state.goal?.goal || "Fitness";
+  const streakDays = 12; // You can keep this hardcoded for now
+  
 
   return (
     <div className="screen active" id="screen-dashboard" style={{ display: 'flex' }}>
@@ -12,10 +16,11 @@ export default function Dashboard({ navigateTo }) {
         <div>
           <div className="greet-eyebrow">Good Morning <span id="dash-name">{userName}</span> 👋</div>
           <div className="greet-name">Day <span id="dash-day">{streakDays}</span> of your Comeback Journey</div>
-          <div className="goal-chip">⚡ Current Goal: Muscle Gain</div>
+          <div className="goal-chip">⚡ Current Goal: {currentGoal}</div>
         </div>
-        <div className="avatar-btn" onClick={() => navigateTo('profile')} style={{ cursor: 'pointer' }}>S</div>
+        <div className="avatar-btn" onClick={() => navigateTo('profile')} style={{ cursor: 'pointer' }}>{initial}</div>
       </div>
+
 
       <div className="pad">
         {/* Section 2: AI Coach Insight */}

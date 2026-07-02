@@ -82,7 +82,7 @@ export default function Auth() {
       <div style={{ marginTop: '20px', marginBottom: '30px' }}>
         <div className="wordmark">
           <span className="come">COME</span>
-          <span className="back" style={{ color: 'var(--c-navy)' }}>BACK</span>
+          <span className="back" style={{ color: 'var(--c-lime)' }}>BACK</span>
         </div>
       </div>
 

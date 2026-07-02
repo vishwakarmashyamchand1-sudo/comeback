@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOnboarding } from '../lib/store.jsx';
 import { API_URL } from '../lib/api.js';
-import { TextField, PillGroup } from '../components/UI.jsx';
+import { TextField, FilterDropdown } from '../components/UI.jsx';
 
-const FILTERS = ['All', 'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Glutes'];
+const MUSCLE_FILTERS = ['All', 'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core', 'Glutes'];
+const EQUIPMENT_FILTERS = ['All', 'Barbell', 'Dumbbell', 'Cable', 'Body Weight', 'Leverage Machine', 'Resistance Band'];
+const GOAL_FILTERS = ['All', 'Muscle Gain', 'Fat Loss', 'Belly Fat', 'Strength', 'Endurance', 'Fitness'];
 
 function mapMuscleGroup(rawGroup) {
   if (!rawGroup) return 'Other';
@@ -19,77 +21,114 @@ function mapMuscleGroup(rawGroup) {
   return rawGroup;
 }
 
+// Custom hook for debouncing search input
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
 export default function ExerciseLibrary({ navigateTo }) {
   const { state } = useOnboarding();
+  
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [selectedExercise, setSelectedExercise] = useState(null);
+  
 
   const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState('All');
+  const debouncedSearch = useDebounce(search, 400); // 400ms debounce
+  
+  const [activeFilter, setActiveFilter] = useState('All'); // Muscle Group
+  const [activeEquipment, setActiveEquipment] = useState('All');
+  const [activeGoal, setActiveGoal] = useState('All');
+  
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  // Reset page to 1 when search or any filter changes
+  useEffect(() => {
+    setPage(1);
+    setExercises([]);
+    setHasMore(true);
+  }, [debouncedSearch, activeFilter, activeEquipment, activeGoal]);
 
   useEffect(() => {
     async function loadExercises() {
       try {
-        setLoading(true);
+        if (page === 1) setLoading(true);
+        else setLoadingMore(true);
+        
         setError('');
         
-        let allEx = [];
-        let page = 1;
-        const limit = 100;
-        let hasMore = true;
-
-        while (hasMore) {
-          const res = await fetch(`${API_URL}/api/exercises?page=${page}&limit=${limit}`, {
-            headers: { 'Authorization': `Bearer ${state.token}` }
-          });
-          const data = await res.json();
-          
-          if (!res.ok) throw new Error(data.message || 'Unable to load exercises');
-          
-          allEx = [...allEx, ...(data.exercises || [])];
-          
-          if (allEx.length >= data.total || (data.exercises && data.exercises.length < limit)) {
-            hasMore = false;
-          } else {
-            page++;
-          }
+        // Build query string
+        const params = new URLSearchParams({
+          page: page,
+          limit: 20
+        });
+        
+        if (debouncedSearch.trim()) {
+          params.append('search', debouncedSearch.trim());
         }
         
-        // Map backend muscles to UI muscles
-        const mapped = allEx.map(ex => ({
+        if (activeFilter !== 'All') {
+          params.append('muscleGroup', activeFilter);
+        }
+        
+        if (activeEquipment !== 'All') {
+          params.append('equipment', activeEquipment.toLowerCase());
+        }
+        
+        if (activeGoal !== 'All') {
+          // Format Goal for backend (e.g. "Weight Loss" -> "weight_loss")
+          const formattedGoal = activeGoal.toLowerCase().replace(' ', '_');
+          params.append('goalTag', formattedGoal);
+        }
+
+        const res = await fetch(`${API_URL}/api/exercises?${params.toString()}`, {
+          headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.message || 'Unable to load exercises');
+        
+        const newExercises = data.exercises || [];
+        
+        // Map backend muscles to UI muscles for display
+        const mapped = newExercises.map(ex => ({
           ...ex,
           uiMuscle: mapMuscleGroup(ex.muscleGroup)
         }));
         
-        setExercises(mapped);
+        setExercises(prev => page === 1 ? mapped : [...prev, ...mapped]);
+        
+        // Check if we reached the end
+        if (page === 1 && mapped.length >= data.total) {
+          setHasMore(false);
+        } else if (mapped.length < 20) {
+          setHasMore(false); // Less than requested limit means we reached the end
+        }
+        
       } catch (err) {
         setError('Unable to load exercises.\nPlease try again.');
         console.error(err);
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     }
     
     if (state.token) {
       loadExercises();
     }
-  }, [state.token]);
-
-  // Derived state for filtering
-  const filtered = exercises.filter(ex => {
-    // 1. Filter by Muscle Group
-    if (activeFilter !== 'All' && ex.uiMuscle !== activeFilter) return false;
-    
-    // 2. Filter by Search
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      if (!ex.name.toLowerCase().includes(q)) return false;
-    }
-    
-    return true;
-  });
+  }, [state.token, debouncedSearch, activeFilter, activeEquipment, activeGoal, page]);
 
   return (
     <div className="screen active" style={{ display: 'flex' }}>
@@ -110,9 +149,34 @@ export default function ExerciseLibrary({ navigateTo }) {
         </div>
 
         {/* Filters */}
-        <div style={{ marginBottom: '20px', overflowX: 'auto', paddingBottom: '8px', WebkitOverflowScrolling: 'touch' }}>
-          <div style={{ display: 'flex', gap: '8px', width: 'max-content' }}>
-            <PillGroup options={FILTERS} value={activeFilter} onChange={setActiveFilter} />
+        <div className="filter-row-container">
+          <div className="filter-top-bar">
+            <button className="reset-btn" onClick={() => { setActiveFilter('All'); setActiveEquipment('All'); setActiveGoal('All'); }}>
+              <i className="ti ti-refresh" /> Reset Filters
+            </button>
+          </div>
+          <div className="filter-dropdowns">
+            <FilterDropdown 
+              icon="stretching" 
+              placeholder="Search muscle..." 
+              value={activeFilter} 
+              onChange={setActiveFilter} 
+              options={MUSCLE_FILTERS} 
+            />
+            <FilterDropdown 
+              icon="barbell" 
+              placeholder="Search equipment..." 
+              value={activeEquipment} 
+              onChange={setActiveEquipment} 
+              options={EQUIPMENT_FILTERS} 
+            />
+            <FilterDropdown 
+              icon="target" 
+              placeholder="Search goal..." 
+              value={activeGoal} 
+              onChange={setActiveGoal} 
+              options={GOAL_FILTERS} 
+            />
           </div>
         </div>
 
@@ -136,27 +200,43 @@ export default function ExerciseLibrary({ navigateTo }) {
           </div>
         )}
 
-        {!loading && !error && filtered.length === 0 && (
+        {!loading && !error && exercises.length === 0 && (
           <div className="empty-state">
             <i className="ti ti-search" style={{ fontSize: 40, color: 'var(--c-text-muted)', marginBottom: 12 }}></i>
             <div>No exercises found</div>
           </div>
         )}
 
-        {!loading && !error && filtered.length > 0 && (
-          <div className="lib-grid">
-            {filtered.map(ex => (
-              <div key={ex._id || ex.sourceId} className="lib-card">
-                <div className="lib-img-wrap">
-                  <img src={ex.gifUrl} alt={ex.name} className="lib-gif" loading="lazy" />
-                  <div className="lib-badge">{ex.uiMuscle}</div>
+        {!loading && !error && exercises.length > 0 && (
+          <>
+            <div className="lib-grid">
+              {exercises.map((ex, idx) => (
+                <div key={`${ex._id || ex.sourceId}-${idx}`} className="lib-card">
+                  <div className="lib-img-wrap">
+                    <img src={ex.gifUrl} alt={ex.name} className="lib-gif" loading="lazy" />
+                    <div className="lib-badge">{ex.uiMuscle}</div>
+                  </div>
+                  <div className="lib-info">
+                    <div className="lib-name">{ex.name}</div>
+                  </div>
                 </div>
-                <div className="lib-info">
-                  <div className="lib-name">{ex.name}</div>
-                </div>
+              ))}
+            </div>
+            
+            {/* Pagination: Load More */}
+            {hasMore && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={loadingMore}
+                  style={{ width: 'auto', minWidth: '150px' }}
+                >
+                  {loadingMore ? 'Loading...' : 'Load More'}
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
       

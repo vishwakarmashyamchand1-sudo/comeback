@@ -13,6 +13,12 @@ import { API_URL } from './lib/api.js';
 
 export default function App() {
   const { state, dispatch } = useOnboarding();
+    React.useEffect(() => {
+    // Wait until they are authenticated before jumping!
+    if (state.isAuthenticated && localStorage.getItem('hasCompletedOnboarding') === 'true') {
+      dispatch({ type: 'next', step: 'dashboard' });
+    }
+  }, [state.isAuthenticated, dispatch]);
   const { step, dir } = state;
   const [done, setDone] = useState(false);
 
@@ -105,9 +111,15 @@ export default function App() {
   const props = { onNext: next, onBack: back, onSkip: skip, dir };
 
   let screen;
-  if (step === 'generating') {
+  
+  if (!state.isAuthenticated) {
+    screen = <Auth />;
+  } else if (step === 'generating') {
     screen = done
-      ? <PlanReady onRestart={() => { dispatch({ type: 'reset' }); setDone(false); }} onContinue={() => dispatch({ type: 'next', step: 'dashboard' })} />
+      ? <PlanReady onRestart={() => { dispatch({ type: 'reset' }); setDone(false); }} 
+      onContinue={() => {
+        localStorage.setItem('hasCompletedOnboarding', 'true');
+        dispatch({ type: 'next', step: 'dashboard' });}} />
       : <Generating onDone={() => setDone(true)} />;
   } else if (step === 'dashboard') {
     return <MainApp />;
@@ -121,11 +133,7 @@ export default function App() {
     }[step];
   }
 
-  if (!state.isAuthenticated) {
-    screen = <Auth />;
-  }
-
-  const dark = step === 'generating';
+  const dark = step === 'generating' || !state.isAuthenticated;
 
   return (
     <div className="app-shell" style={dark ? { background: '#1A1A2E' } : undefined}>
