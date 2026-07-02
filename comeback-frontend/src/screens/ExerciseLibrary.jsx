@@ -24,6 +24,7 @@ export default function ExerciseLibrary({ navigateTo }) {
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedExercise, setSelectedExercise] = useState(null);
 
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
@@ -158,6 +159,32 @@ export default function ExerciseLibrary({ navigateTo }) {
           </div>
         )}
       </div>
+      
+      {/* Modal Overlay */}
+      {selectedExercise && (
+        <div className="exercise-modal-overlay" onClick={() => setSelectedExercise(null)}>
+          <div className="exercise-modal-content" onClick={e => e.stopPropagation()}>
+            <button className="close-btn" onClick={() => setSelectedExercise(null)}>&times;</button>
+            <div className="modal-gif-wrap">
+              <img src={selectedExercise.gifUrl} alt={selectedExercise.name} className="modal-gif" loading="lazy" />
+            </div>
+            <div className="modal-info">
+              <h2 className="modal-title">{selectedExercise.name}</h2>
+              <p className="modal-why">{selectedExercise.whyLabel || 'Great exercise for building strength and endurance.'}</p>
+              <div className="modal-tags">
+                <span className="modal-badge muscle">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5v-15A2.5 2.5 0 016.5 2H20v20H6.5a2.5 2.5 0 01-2.5-2.5z"/></svg>
+                  {selectedExercise.uiMuscle}
+                </span>
+                <span className="modal-badge eq">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4v16M18 4v16M2 8h4M2 16h4M18 8h4M18 16h4M6 12h12"/></svg>
+                  {selectedExercise.equipment}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
