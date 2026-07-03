@@ -27,18 +27,26 @@ const getAllExercises = asyncHandler(async (req, res) => {
 
   const filter = { isActive: true };
 
-  // 3. Search regex match (Step 112)
+  // 3. Search regex match (Step 112 modified for universal search)
   if (search) {
-    const searchRegex = new RegExp(search, 'i'); // Case-insensitive
+    // Replace spaces with an expression that matches spaces or underscores
+    // so searching "belly fat" matches the "belly_fat" goal tag!
+    const flexibleSearch = search.trim().replace(/\s+/g, '[_\\s-]*');
+    const searchRegex = new RegExp(flexibleSearch, 'i'); // Case-insensitive
+    
+    // Search across everything and anything as per Sir's updated instruction
     filter.$or = [
       { name: searchRegex },
-      { goalTags: searchRegex }
+      { goalTags: searchRegex },
+      { targetMuscle: searchRegex },
+      { secondaryMuscles: searchRegex },
+      { equipment: searchRegex }
     ];
   }
 
-  // 4. Exact filters (Step 113)
-  // We use regex with '^' and '$' to ensure exact matches, but 'i' makes them case-insensitive!
-  if (muscleGroup) filter.muscleGroup = new RegExp('^' + muscleGroup + '$', 'i'); 
+  // 4. Filters (Step 113)
+  // Use '^' for muscleGroup to allow 'Legs' to match both 'Legs_Quads' and 'Legs_Hamstrings'
+  if (muscleGroup) filter.muscleGroup = new RegExp('^' + muscleGroup, 'i'); 
   if (equipment) filter.equipment = new RegExp('^' + equipment + '$', 'i');
   if (goalTag) filter.goalTags = new RegExp('^' + goalTag + '$', 'i');
 

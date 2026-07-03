@@ -8,17 +8,18 @@ import Step4 from './screens/Step4.jsx';
 import Step5 from './screens/Step5.jsx';
 import Generating from './screens/Generating.jsx';
 import Auth from './screens/Auth.jsx';
-import MainApp from './screens/MainApp.jsx';
+
 import { API_URL } from './lib/api.js';
 
-export default function App() {
+export default function App({ onEnterApp }) {
   const { state, dispatch } = useOnboarding();
     React.useEffect(() => {
     // Wait until they are authenticated before jumping!
     if (state.isAuthenticated && localStorage.getItem('hasCompletedOnboarding') === 'true') {
-      dispatch({ type: 'next', step: 'dashboard' });
+      if (onEnterApp) onEnterApp();
+      else dispatch({ type: 'next', step: 'dashboard' });
     }
-  }, [state.isAuthenticated, dispatch]);
+  }, [state.isAuthenticated, dispatch, onEnterApp]);
   const { step, dir } = state;
   const [done, setDone] = useState(false);
 
@@ -119,10 +120,10 @@ export default function App() {
       ? <PlanReady onRestart={() => { dispatch({ type: 'reset' }); setDone(false); }} 
       onContinue={() => {
         localStorage.setItem('hasCompletedOnboarding', 'true');
-        dispatch({ type: 'next', step: 'dashboard' });}} />
+        if (onEnterApp) onEnterApp();
+        else dispatch({ type: 'next', step: 'dashboard' });}} />
       : <Generating onDone={() => setDone(true)} />;
-  } else if (step === 'dashboard') {
-    return <MainApp />;
+
   } else {
     screen = {
       1: <Step1 {...props} />,
