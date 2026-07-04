@@ -1,9 +1,10 @@
 // Derived-value helpers — pure, used by the onboarding screens.
 
 export function calcAge(dob) {
-  if (!dob) return null;
-  const birth = new Date(dob);
-  if (isNaN(birth.getTime())) return null;
+  const { d, m, y } = dob || {};
+  if (!d || !m || !y || String(y).length !== 4) return null;
+  const birth = new Date(+y, +m - 1, +d);
+  if (isNaN(birth)) return null;
   const now = new Date();
   let age = now.getFullYear() - birth.getFullYear();
   const md = now.getMonth() - birth.getMonth();

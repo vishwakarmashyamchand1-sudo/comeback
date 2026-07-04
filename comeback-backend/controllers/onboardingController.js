@@ -42,6 +42,18 @@ const saveOnboardingProfile = asyncHandler(async (req, res) => {
     updateData.preferredTime = data.preferredTime;
     if (data.strongestMuscle) updateData.strongestMuscle = data.strongestMuscle;
     if (data.weakestMuscle) updateData.weakestMuscle = data.weakestMuscle;
+    
+    if (data.fitnessLevel !== 'Beginner' && data.baselineLifts) {
+      const parsedLifts = {};
+      if (data.baselineLifts.chestPressKg) parsedLifts.chestPressKg = Number(data.baselineLifts.chestPressKg);
+      if (data.baselineLifts.shoulderPressKg) parsedLifts.shoulderPressKg = Number(data.baselineLifts.shoulderPressKg);
+      if (data.baselineLifts.squatKg) parsedLifts.squatKg = Number(data.baselineLifts.squatKg);
+      if (data.baselineLifts.deadliftKg) parsedLifts.deadliftKg = Number(data.baselineLifts.deadliftKg);
+      updateData.baselineLifts = parsedLifts;
+    } else {
+      // Clear them if they switch to Beginner
+      updateData.baselineLifts = { chestPressKg: null, shoulderPressKg: null, squatKg: null, deadliftKg: null };
+    }
   } else if (step_number === 3) {
     if (!data.primaryGoal || !data.motivationEvent || !data.urgencyLevel) {
       res.status(400);
@@ -63,7 +75,7 @@ const saveOnboardingProfile = asyncHandler(async (req, res) => {
     updateData.medicalConditions = data.medicalConditions || [];
     if (typeof data.exercisesToAvoid !== 'undefined') updateData.exercisesToAvoid = data.exercisesToAvoid;
     // doctorClearance isn't stored in User model currently, but we validate it per API doc
-
+    updateData.onboardingComplete = true; // Mark as complete!
   } else {
     res.status(400);
     throw new Error('Invalid step number. Must be between 1 and 5');

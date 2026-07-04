@@ -28,7 +28,8 @@ export function ProgressSteps({ current, total = 5 }) {
 export function ObHeader({ step, onBack, onSkip, canSkip = true }) {
   return (
     <div className="ob-header">
-      <button className="back-btn" onClick={onBack} aria-label="Back">
+      <button className="back-btn" onClick={onBack} aria-label="Back" disabled={step === 1}
+        style={step === 1 ? { opacity: .4, pointerEvents: 'none' } : undefined}>
         <i className="ti ti-arrow-left" />
       </button>
       <span className="step-counter">Step {step} of 5</span>
@@ -53,29 +54,17 @@ export function SectionLabel({ children }) {
   return <div className="s-label">{children}</div>;
 }
 
-export function TextField({ value, onChange, placeholder, type = 'text', error, hint, hintOk, style, autoComplete, readOnly, min, max }) {
-  const isDate = type === 'date';
-  
+export function TextField({ value, onChange, placeholder, type = 'text', error, hint, hintOk, style }) {
   return (
-    <div style={{ position: 'relative' }}>
+    <div>
       <input
-        className={`input ${value ? 'filled' : ''} ${error ? 'error' : ''} ${readOnly ? 'readonly' : ''} ${isDate && !value ? 'date-empty' : ''}`}
+        className={`input ${value ? 'filled' : ''} ${error ? 'error' : ''}`}
         type={type}
         value={value}
         placeholder={placeholder}
-        onChange={e => onChange && onChange(e.target.value)}
+        onChange={e => onChange(e.target.value)}
         style={style}
-        autoComplete={autoComplete}
-        readOnly={readOnly}
-        min={min}
-        max={max}
       />
-      {isDate && (
-        <i className="ti ti-calendar" style={{ 
-          position: 'absolute', right: 15, top: '50%', transform: 'translateY(-50%)', 
-          color: 'var(--c-text-muted)', fontSize: 18, pointerEvents: 'none' 
-        }} />
-      )}
       {error
         ? <div className="err-text"><i className="ti ti-alert-circle" /> {error}</div>
         : hint ? <div className={`hint ${hintOk ? 'ok' : ''}`}>{hint}</div> : null}
@@ -143,24 +132,5 @@ export function PrimaryButton({ children, onClick, disabled, lime }) {
     <button className={`btn ${lime ? 'btn-lime' : 'btn-primary'}`} onClick={onClick} disabled={disabled}>
       {children}
     </button>
-  );
-}
-
-export function FilterDropdown({ icon, value, onChange, options, placeholder }) {
-  return (
-    <div className="filter-dropdown-wrapper">
-      {icon && <i className={`ti ti-${icon} filter-icon`} />}
-      <select 
-        className={`filter-select ${icon ? 'has-icon' : ''}`} 
-        value={value} 
-        onChange={e => onChange(e.target.value)}
-      >
-        <option value="All" disabled hidden>{placeholder || "Select..."}</option>
-        {options.map(o => (
-          <option key={o} value={o}>{o === 'All' ? `All ${placeholder ? placeholder.replace('Search ', '').replace('...', '') : ''}` : o}</option>
-        ))}
-      </select>
-      <i className="ti ti-chevron-down filter-chevron" />
-    </div>
   );
 }

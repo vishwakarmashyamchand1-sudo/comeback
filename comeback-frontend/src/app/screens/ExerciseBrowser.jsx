@@ -183,7 +183,7 @@ export function ExerciseBrowser({ onClose, onAdd }) {
         <div className="sheet-scrim" onClick={() => setDetail(null)}>
           <div className="sheet" onClick={e => e.stopPropagation()}>
             <div className="sheet-grab" />
-            <div className="scroll" style={{ padding: '0 20px 16px', overflowY: 'auto' }}>
+            <div className="scroll" style={{ flex: 1, minHeight: 0, padding: '0 20px 16px', overflowY: 'auto' }}>
               <div className="thumb" style={{ height: 200, borderRadius: 16, fontSize: 34, marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
                 {detail.gifUrl ? (
                   <img src={detail.gifUrl} alt={detail.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

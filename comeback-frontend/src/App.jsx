@@ -41,7 +41,7 @@ export default function App({ onEnterApp }) {
               currentWeightKg: localData.weightKg,
               targetWeightKg: localData.targetWeight,
               targetDate: localData.targetDate,
-              dateOfBirth: localData.dob && localData.dob.y ? new Date(`${localData.dob.y}-${localData.dob.m || 1}-${localData.dob.d || 1}`).toISOString() : null,
+              dateOfBirth: localData.dob ? new Date(localData.dob).toISOString() : null,
               gender: localData.gender
             };
           } else if (step === 2) {
@@ -52,7 +52,8 @@ export default function App({ onEnterApp }) {
               daysPerWeek: localData.daysPerWeek,
               preferredTime: localData.time,
               strongestMuscle: localData.strongest,
-              weakestMuscle: localData.weakest
+              weakestMuscle: localData.weakest,
+              baselineLifts: localData.baselineLifts
             };
           } else if (step === 3) {
             payloadData = {

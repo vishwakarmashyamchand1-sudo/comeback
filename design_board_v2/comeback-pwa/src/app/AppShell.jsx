@@ -37,6 +37,7 @@ export default function AppShell() {
 
   return (
     <div className="app-shell" style={dark ? { background: '#1A1A2E' } : undefined}>
+      <StatusBar light={dark} />
       {overlay || tabScreen}
       {!overlay && <TabBar active={tab} onChange={setTab} />}
     </div>

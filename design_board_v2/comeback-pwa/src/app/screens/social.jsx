@@ -235,7 +235,7 @@ function MemberDetailSheet({ member, onClose }) {
   if (!w) return null;
   return (
     <Sheet onClose={onClose} maxHeight="86%">
-      <div className="scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 20px 16px' }}>
+      <div className="scroll" style={{ overflowY: 'auto', padding: '0 20px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <div className="avatar soft" style={{ width: 52, height: 52, fontSize: 17 }}>{member.initials}</div>
           <div style={{ flex: 1 }}><div style={{ fontSize: 17, fontWeight: 600, color: '#1A1A2E' }}>{member.name}</div><div style={{ fontSize: 12, color: '#8A8A85' }}>{member.place} · {w.time}</div></div>

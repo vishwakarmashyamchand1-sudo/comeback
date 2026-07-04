@@ -1,121 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Wordmark, Bar, CoachCard, Thumb, PushHeader, Sheet } from '../components.jsx';
-import { tomorrow, nutrition, circle, dayTypes } from '../data.js';
-import { API_URL } from '../../lib/api.js';
-import { useOnboarding } from '../../lib/store.jsx';
-
-let cachedWorkout = null;
-
-export function useTodayWorkout() {
-  const { state } = useOnboarding();
-  const [w, setW] = useState(cachedWorkout);
-  const [loading, setLoading] = useState(!cachedWorkout);
-
-  useEffect(() => {
-    if (cachedWorkout) return;
-    fetch(`${API_URL}/api/workouts/today`, {
-      headers: { Authorization: `Bearer ${state.token}` }
-    })
-      .then(r => {
-        if (!r.ok && r.status === 404) return { workout: null, isRestDay: true };
-        return r.json();
-      })
-      .then(d => {
-        if (d.isRestDay || !d.workout) {
-           const rest = { restDay: true };
-           cachedWorkout = rest;
-           setW(rest);
-           setLoading(false);
-           return;
-        }
-        
-        const mapped = {
-          title: `${d.workout.sessionType} — Week ${d.workout.weekNumber}`,
-          type: d.workout.sessionType,
-          week: d.workout.weekNumber,
-          day: new Date(d.workout.date).getDate(),
-          dow: d.workout.dayOfWeek,
-          durationMin: d.workout.exercises.length * 8,
-          exercises: d.workout.exercises.map(ex => ({
-            id: ex._id,
-            name: ex.exerciseName || ex.exerciseId?.name || 'Exercise',
-            muscle: ex.muscleGroup || ex.exerciseId?.targetMuscle || 'General',
-            sets: ex.sets.length,
-            reps: ex.sets[0]?.plannedReps || 10,
-            weight: ex.sets[0]?.plannedWeight || 0,
-            why: ex.antigravityReasoning || ex.benefits || ex.exerciseId?.whyLabel || 'Builds strength and endurance.'
-          }))
-        };
-        cachedWorkout = mapped;
-        setW(mapped);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to fetch workout:", err);
-        setLoading(false);
-      });
-  }, [state.token]);
-
-  return { w, loading };
-}
+import { todayWorkout, tomorrow, nutrition, circle, dayTypes } from '../data.js';
 
 /* ─────────────────────────── DASHBOARD (Workout tab home) ── */
 export function Dashboard({ done, onStart, onViewSummary, onOpenCircle, goDiet, onOpenProfile, onChangeDay }) {
-  const { state } = useOnboarding();
-  const userName = state.profile?.name || 'Athlete';
-  const initial = userName.charAt(0).toUpperCase();
-
   const hour = new Date().getHours();
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  
-  const { w, loading } = useTodayWorkout();
-  
-  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-
-  const [dayType, setDayType] = useState('');
-  const [dayOpen, setDayOpen] = useState(false);
-
-  useEffect(() => {
-    if (w && !w.restDay) {
-      setDayType(w.type);
-    }
-  }, [w]);
-
-  // Dynamically generate the title based on the selected dayType
-  const dt = dayTypes.find(d => d.name.startsWith(dayType.split(' ')[0])) || dayTypes[0];
-  const dynamicTitle = dt ? `${dt.name} — ${dt.muscles.replace(/ · /g, ' & ')}` : '';
-
-  if (loading) {
-    return (
-      <div className="app-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="spinner" style={{ borderTopColor: '#C8F25C' }} />
-      </div>
-    );
-  }
-
-  if (w?.restDay) {
-    return (
-      <div className="app-body">
-        <div className="screen-pad scroll">
-          <div className="app-top">
-            <div>
-              <div style={{ marginBottom: 10 }}><Wordmark /></div>
-              <div className="greeting">{greet}, {userName}</div>
-              <div className="subtle">Rest Day</div>
-            </div>
-            <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
-              <button className="icon-btn"><i className="ti ti-bell" />{!done && <span className="dot-red" />}</button>
-              <button className="icon-btn" onClick={onOpenProfile} style={{ borderRadius: '50%', background: '#1A1A2E', color: '#C8F25C', border: 'none', fontSize: 14, fontWeight: 600 }}>{initial}</button>
-            </div>
-          </div>
-          <div className="card-navy" style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 19, fontWeight: 500, color: '#fff', marginBottom: 14 }}>Rest & Recovery</div>
-            <div style={{ fontSize: 13, color: '#8A8AAA', lineHeight: 1.6 }}>Your muscles rebuild today. Take a walk and hit your protein goals.</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const w = todayWorkout;
 
   return (
     <div className="app-body">
@@ -123,14 +14,15 @@ export function Dashboard({ done, onStart, onViewSummary, onOpenCircle, goDiet, 
         <div className="app-top">
           <div>
             <div style={{ marginBottom: 10 }}><Wordmark /></div>
-            <div className="greeting" style={{ textTransform: 'capitalize' }}>{greet}, {userName}</div>
-            <div className="subtle">{currentDay} · Week {w.week} · Day {w.day}</div>
+            <div className="greeting">{greet}, Prashant</div>
+            <div className="subtle">{w.dow} · Week {w.week} · Day {w.day}</div>
           </div>
           <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
             <button className="icon-btn"><i className="ti ti-bell" />{!done && <span className="dot-red" />}</button>
-            <button className="icon-btn" onClick={onOpenProfile} style={{ borderRadius: '50%', background: '#1A1A2E', color: '#C8F25C', border: 'none', fontSize: 14, fontWeight: 600 }}>{initial}</button>
+            <button className="icon-btn" onClick={onOpenProfile} style={{ borderRadius: '50%', background: '#1A1A2E', color: '#C8F25C', border: 'none', fontSize: 14, fontWeight: 600 }}>P</button>
           </div>
         </div>
+
         {/* workout card */}
         <div className="card-navy" style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -143,9 +35,9 @@ export function Dashboard({ done, onStart, onViewSummary, onOpenCircle, goDiet, 
               : <span className="badge muted">Not started</span>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
-            <div style={{ fontSize: 19, fontWeight: 500, letterSpacing: '-.02em', color: '#fff' }}>{dynamicTitle}</div>
+            <div style={{ fontSize: 19, fontWeight: 500, letterSpacing: '-.02em', color: '#fff' }}>{w.title}</div>
             {!done && (
-              <div onClick={() => setDayOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 'none', background: '#ffffff14', borderRadius: 20, padding: '5px 10px', cursor: 'pointer' }}>
+              <div onClick={onChangeDay} style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 'none', background: '#ffffff14', borderRadius: 20, padding: '5px 10px', cursor: 'pointer' }}>
                 <i className="ti ti-repeat" style={{ color: '#C8F25C', fontSize: 13 }} /><span style={{ fontSize: 11, fontWeight: 500, color: '#C8F25C' }}>Change</span>
               </div>
             )}
@@ -167,14 +59,14 @@ export function Dashboard({ done, onStart, onViewSummary, onOpenCircle, goDiet, 
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 16 }}>
                 {w.exercises.slice(0, 3).map((e, i) => (
-                  <React.Fragment key={e.id || e.name}>
+                  <React.Fragment key={e.id}>
                     {i > 0 && <div className="rowline dark" />}
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                       <span style={{ color: '#D8D8E4' }}>{e.name}</span><span style={{ color: '#8A8AAA' }}>{e.sets} × {e.reps}</span>
                     </div>
                   </React.Fragment>
                 ))}
-                <div style={{ fontSize: 12, color: '#6A6A8A', marginTop: 2 }}>+ {w.exercises.length > 3 ? w.exercises.length - 3 : 0} more · ~{w.durationMin} mins</div>
+                <div style={{ fontSize: 12, color: '#6A6A8A', marginTop: 2 }}>+ {w.exercises.length - 3} more · ~{w.durationMin} mins</div>
               </div>
               <button className="btn btn-lime" onClick={onStart}>Start workout <i className="ti ti-arrow-right btn-icon" /></button>
             </>
@@ -217,7 +109,6 @@ export function Dashboard({ done, onStart, onViewSummary, onOpenCircle, goDiet, 
           </div>
         </div>
       </div>
-      {dayOpen && <ChangeDaySheet current={dayType} onClose={() => setDayOpen(false)} onPick={t => { setDayType(t); setDayOpen(false); }} />}
     </div>
   );
 }
@@ -235,24 +126,20 @@ function Metric({ label, val, target, value, max }) {
 }
 
 /* ─────────────────────────── WORKOUT PLAN (pre-workout) ──── */
-export function WorkoutPlan({ onBack, onStart, onAddExercise }) {
-  const { w, loading } = useTodayWorkout();
-  
-  const [rows, setRows] = useState([]);
+export function WorkoutPlan({ onBack, onStart, restDay, onAddExercise }) {
+  const w = todayWorkout;
+  const [rows, setRows] = useState(() => w.exercises.map(e => ({ ...e, state: 'active' })));
   const [pickerFor, setPickerFor] = useState(null); // exercise id being substituted
   const [dayOpen, setDayOpen] = useState(false);
-  const [dayType, setDayType] = useState('');
+  const [dayType, setDayType] = useState(w.type);
 
-  useEffect(() => {
-    if (w && !w.restDay && w.exercises) {
-      setRows(w.exercises.map(e => ({ ...e, state: 'active' })));
-      setDayType(w.type);
-    }
-  }, [w]);
+  const setState = (id, state) => setRows(rs => rs.map(r => r.id === id ? { ...r, state } : r));
+  const remove = id => setRows(rs => rs.filter(r => r.id !== id));
+  const substitute = (id, name) => setRows(rs => rs.map(r => r.id === id ? { ...r, state: 'sub', was: r.name, name } : r));
 
-  if (loading) return <div className="app-body" style={{display:'flex', alignItems:'center', justifyContent:'center'}}><div className="spinner"></div></div>;
+  const activeCount = rows.filter(r => r.state !== 'skipped').length;
 
-  if (w?.restDay) {
+  if (restDay) {
     return (
       <div className="app-body">
         <PushHeader title="Today's workout" onBack={onBack} right="ti-calendar" />
@@ -265,12 +152,6 @@ export function WorkoutPlan({ onBack, onStart, onAddExercise }) {
       </div>
     );
   }
-
-  const setState = (id, state) => setRows(rs => rs.map(r => r.id === id ? { ...r, state } : r));
-  const remove = id => setRows(rs => rs.filter(r => r.id !== id));
-  const substitute = (id, name) => setRows(rs => rs.map(r => r.id === id ? { ...r, state: 'sub', was: r.name, name } : r));
-
-  const activeCount = rows.filter(r => r.state !== 'skipped').length;
 
   return (
     <div className="app-body">
@@ -288,7 +169,7 @@ export function WorkoutPlan({ onBack, onStart, onAddExercise }) {
           {rows.map(e => {
             if (e.state === 'skipped') {
               return (
-                <div key={e.id || e.name} className="card" style={{ padding: 13, display: 'flex', gap: 12, alignItems: 'center', background: '#F5F5F3', opacity: .7 }}>
+                <div key={e.id} className="card" style={{ padding: 13, display: 'flex', gap: 12, alignItems: 'center', background: '#F5F5F3', opacity: .7 }}>
                   <Thumb style={{ color: '#C8C8C4' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
@@ -303,7 +184,7 @@ export function WorkoutPlan({ onBack, onStart, onAddExercise }) {
             }
             const sub = e.state === 'sub';
             return (
-              <div key={e.id || e.name} className="card" style={{ padding: 13, border: sub ? '1.5px solid #D97706' : '1px solid #DDDDD9' }}>
+              <div key={e.id} className="card" style={{ padding: 13, border: sub ? '1.5px solid #D97706' : '1px solid #DDDDD9' }}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   <Thumb />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -321,6 +202,7 @@ export function WorkoutPlan({ onBack, onStart, onAddExercise }) {
                 <div style={{ display: 'flex', gap: 8, marginTop: 11, paddingTop: 11, borderTop: '1px solid #EDEDEA' }}>
                   <div onClick={() => setPickerFor(e.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 9, padding: 8, fontSize: 12, fontWeight: 500, color: '#1A1A2E', background: '#F5F5F3', cursor: 'pointer' }}><i className="ti ti-repeat" style={{ fontSize: 14 }} /> Substitute</div>
                   <div onClick={() => setState(e.id, 'skipped')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 9, padding: 8, fontSize: 12, fontWeight: 500, color: '#8A8A85', background: '#F5F5F3', cursor: 'pointer' }}><i className="ti ti-player-skip-forward" style={{ fontSize: 14 }} /> Skip</div>
+                  <div onClick={() => remove(e.id)} style={{ flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 9, padding: '8px 11px', color: '#DC2626', background: '#FEF2F2', cursor: 'pointer' }}><i className="ti ti-trash" style={{ fontSize: 14 }} /></div>
                 </div>
               </div>
             );
@@ -343,13 +225,13 @@ export function WorkoutPlan({ onBack, onStart, onAddExercise }) {
   );
 }
 
-export function ChangeDaySheet({ current, onClose, onPick }) {
+function ChangeDaySheet({ current, onClose, onPick }) {
   return (
     <Sheet onClose={onClose}>
       <div style={{ padding: '0 20px 22px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ fontSize: 18, fontWeight: 600, color: '#1A1A2E', marginBottom: 3 }}>Change today's focus</div>
         <div style={{ fontSize: 12, color: '#8A8A85', marginBottom: 16 }}>Picking a new focus reloads that group's exercises for today.</div>
-        <div className="scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="scroll" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {dayTypes.map(d => {
             const sel = current.startsWith(d.name.split(' ')[0]);
             return (
@@ -393,24 +275,16 @@ function SubstituteSheet({ onClose, onPick }) {
 
 /* ─────────────────────────── ACTIVE WORKOUT ──────────────── */
 export function ActiveWorkout({ onBack, onFinish, onSwap }) {
-  const { w, loading } = useTodayWorkout();
+  const w = todayWorkout;
   const [idx, setIdx] = useState(0);
+  const ex = w.exercises[idx];
+  const [sets, setSets] = useState(() => w.exercises.map(e => Array.from({ length: e.sets }, () => ({ reps: '', weight: '', done: false }))));
   const [elapsed, setElapsed] = useState(34 * 60 + 12);
-  const [sets, setSets] = useState([]);
-
-  useEffect(() => {
-    if (!w || loading || w.restDay || !w.exercises) return;
-    setSets(w.exercises.map(e => Array.from({ length: e.sets }, () => ({ reps: '', weight: '', done: false }))));
-  }, [w, loading]);
 
   useEffect(() => {
     const t = setInterval(() => setElapsed(e => e + 1), 1000);
     return () => clearInterval(t);
   }, []);
-
-  if (loading || !w || !sets.length || w.restDay) return <div className="app-body" style={{display:'flex', alignItems:'center', justifyContent:'center'}}><div className="spinner"></div></div>;
-
-  const ex = w.exercises[idx];
   const fmt = s => `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   const cur = sets[idx];
@@ -426,6 +300,10 @@ export function ActiveWorkout({ onBack, onFinish, onSwap }) {
       <div style={{ flex: 'none', padding: '12px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div><div style={{ fontSize: 16, fontWeight: 600, color: '#1A1A2E' }}>{w.type}</div><div style={{ fontSize: 12, color: '#8A8A85', marginTop: 1 }}>{idx + (cur.every(s => s.done) ? 1 : 0)} of {w.exercises.length} exercises done</div></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 500, color: '#1A1A2E' }}>{fmt(elapsed)}</span>
+            <button className="icon-btn"><i className="ti ti-player-pause" /></button>
+          </div>
         </div>
         <div className="bar" style={{ height: 5 }}><i style={{ width: `${(idx / w.exercises.length) * 100}%`, background: '#C8F25C' }} /></div>
       </div>
@@ -449,7 +327,7 @@ export function ActiveWorkout({ onBack, onFinish, onSwap }) {
               <div key={si} className={`set-row ${s.done ? 'done' : isActive ? 'active' : ''}`}>
                 <span className="set-num" style={{ color: s.done ? '#3A7A0A' : '#1A1A2E' }}>{si + 1}</span>
                 <input className="set-input" inputMode="numeric" placeholder={String(ex.reps)} value={s.reps} onChange={e => setField(si, 'reps', e.target.value)} />
-                <input className="set-input" inputMode="decimal" placeholder={ex.weight ? ex.weight.toFixed(1) : '0'} value={s.weight} onChange={e => setField(si, 'weight', e.target.value)} />
+                <input className="set-input" inputMode="decimal" placeholder={ex.weight.toFixed(1)} value={s.weight} onChange={e => setField(si, 'weight', e.target.value)} />
                 <div className={`set-check ${s.done ? 'on' : 'off'}`} onClick={() => toggle(si)}>{s.done && <i className="ti ti-check" />}</div>
               </div>
             );
