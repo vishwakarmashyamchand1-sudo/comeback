@@ -2,7 +2,7 @@ import React from 'react';
 import { useOnboarding } from '../lib/store.jsx';
 import {
   StatusBar, ObHeader, ProgressSteps, StepIntro, SectionLabel,
-  OptionCard, PillGroup, PrimaryButton,TextField
+  OptionCard, PillGroup, PrimaryButton, TextField, SuffixField
 } from '../components/UI.jsx';
 
 const LEVELS = [
@@ -18,6 +18,7 @@ export default function Step2({ onNext, onBack, onSkip, dir }) {
   const { state, dispatch } = useOnboarding();
   const b = state.background;
   const set = value => dispatch({ type: 'patch', slice: 'background', value });
+  const setLift = (lift, value) => set({ baselineLifts: { ...(b.baselineLifts || {}), [lift]: value } });
 
   const valid = b.level && b.daysPerWeek && b.time && b.location;
 
@@ -30,11 +31,55 @@ export default function Step2({ onNext, onBack, onSkip, dir }) {
         sub="Helps your coach set the right starting weights and intensity." />
 
       <SectionLabel>Where are you right now?</SectionLabel>
-      {LEVELS.map(l => (
-        <OptionCard key={l.id} icon={l.icon} iconBg={l.bg} iconColor={l.color}
-          title={l.title || l.id} sub={l.sub}
-          selected={b.level === l.id} onClick={() => set({ level: l.id })} />
-      ))}
+      {LEVELS.map(l => {
+        const isSelected = b.level === l.id;
+        const showLifts = isSelected && (l.id === 'Returning' || l.id === 'Active');
+        
+        return (
+          <div key={l.id} style={{ marginBottom: 10 }}>
+            <OptionCard 
+              icon={l.icon} iconBg={l.bg} iconColor={l.color}
+              title={l.title || l.id} sub={l.sub}
+              selected={isSelected} 
+              onClick={() => set({ level: l.id })} 
+            />
+            {showLifts && (
+              <div className="anim-fwd" style={{ 
+                marginTop: -12, 
+                padding: '25px 20px 20px', 
+                background: 'var(--c-navy-10)', 
+                border: '2px solid var(--c-navy)', 
+                borderTop: 'none',
+                borderRadius: '0 0 var(--r-card) var(--r-card)'
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--c-navy)', marginBottom: 15 }}>
+                  Baseline Lifts (Optional)
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {[
+                    { id: 'chestPressKg', label: 'Chest Press' },
+                    { id: 'shoulderPressKg', label: 'Shoulder Press' },
+                    { id: 'squatKg', label: 'Squat' },
+                    { id: 'deadliftKg', label: 'Deadlift' }
+                  ].map(lift => (
+                    <div key={lift.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-text-primary)' }}>{lift.label}</div>
+                      <div style={{ width: 110 }}>
+                        <SuffixField 
+                          value={b.baselineLifts?.[lift.id] || ''} 
+                          onChange={v => setLift(lift.id, v)} 
+                          placeholder="0" 
+                          suffix="kg" 
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       <SectionLabel>Last active (optional)</SectionLabel>
       <PillGroup options={LAST} value={b.lastActive} onChange={v => set({ lastActive: v })} />

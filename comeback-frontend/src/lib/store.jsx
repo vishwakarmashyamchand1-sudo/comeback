@@ -9,8 +9,8 @@ const initial = {
   token: null,
   step: 1,            // 1..5, then 'generating'
   dir: 'fwd',         // transition direction
-  profile:    { name: '', gender: '', dob: { d: '', m: '', y: '' }, heightCm: '', weightKg: '', targetWeight: '', targetDate: '' },
-  background: { level: '', lastActive: '', daysPerWeek: '', time: '', location: '', strongest: '', weakest: '' },
+  profile:    { name: '', gender: '', dob: '', heightCm: '', weightKg: '', targetWeight: '', targetDate: '' },
+  background: { level: '', lastActive: '', daysPerWeek: '', time: '', location: '', strongest: '', weakest: '', baselineLifts: { chestPressKg: '', shoulderPressKg: '', squatKg: '', deadliftKg: '' } },
   goal:       { goal: '', event: '', urgency: '' },
   diet:       { type: '', restrictions: [], supplements: [] },
   health:     { injuries: [], conditions: [], avoid: '' },
@@ -76,8 +76,7 @@ export function OnboardingProvider({ children }) {
 
   // Listen to Firebase token refreshes in the background!
   useEffect(() => {
-    // Force sign out on every refresh to guarantee the login screen shows first
-    signOut(auth).catch(() => {});
+    // Firebase automatically persists the session. We just listen for token changes.
     
     const unsub = onIdTokenChanged(auth, async (user) => {
       if (user) {

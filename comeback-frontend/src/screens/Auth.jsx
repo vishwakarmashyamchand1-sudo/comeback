@@ -11,6 +11,7 @@ export default function Auth() {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState(''); 
   
   const [loading, setLoading] = useState(false);
@@ -68,6 +69,23 @@ export default function Auth() {
 
       // Backend returns isNewUser flag on register, or onboardingComplete on /me. 
       const userData = isLogin ? data.user : data.data;
+
+      // Skip onboarding if the backend says they've already completed it!
+      if (userData && userData.onboardingComplete) {
+        try {
+          localStorage.setItem('hasCompletedOnboarding', 'true');
+          localStorage.setItem('comeback.onboarded', '1');
+        } catch (e) {
+          console.error('LocalStorage error', e);
+        }
+      } else {
+        // MUST explicitly clear these flags in case a previous user's data is still in localStorage
+        try {
+          localStorage.removeItem('hasCompletedOnboarding');
+          localStorage.removeItem('comeback.onboarded');
+        } catch (e) {}
+      }
+
       dispatch({ type: 'login_success', token, user: userData });
 
     } catch (err) {
@@ -117,13 +135,27 @@ export default function Auth() {
           />
         </div>
 
-        <div style={{ marginBottom: '8px' }}>
+        <div style={{ marginBottom: '8px', position: 'relative' }}>
           <TextField 
             value={password} 
             onChange={setPassword} 
             placeholder="Password (min 6 characters)" 
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="new-password"
+          />
+          <i 
+            className={`ti ${showPassword ? 'ti-eye-off' : 'ti-eye'}`} 
+            onClick={() => setShowPassword(!showPassword)}
+            style={{ 
+              position: 'absolute', 
+              right: 16, 
+              top: '50%', 
+              transform: 'translateY(-50%)', 
+              color: '#8A8A85', 
+              fontSize: 20, 
+              cursor: 'pointer',
+              zIndex: 10
+            }}
           />
         </div>
 

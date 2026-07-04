@@ -10,7 +10,7 @@ export default function Step1({ onNext, onBack, onSkip, dir }) {
   const { state, dispatch } = useOnboarding();
   const p = state.profile;
   const set = value => dispatch({ type: 'patch', slice: 'profile', value });
-  const todayStr = new Date().toISOString().split('T')[0];
+  const setDob = part => set({ dob: { ...p.dob, ...part } });
 
   const age = calcAge(p.dob);
   const bmi = calcBMI(p.heightCm, p.weightKg);
@@ -21,8 +21,7 @@ export default function Step1({ onNext, onBack, onSkip, dir }) {
 
   const valid =
     p.name.trim() && p.gender && age != null &&
-    p.heightCm && p.weightKg && !hErr && !wErr &&
-    p.targetWeight && p.targetDate;
+    p.heightCm && p.weightKg && !hErr && !wErr;
 
   return (
     <div className={`screen anim-${dir}`}>
@@ -33,8 +32,8 @@ export default function Step1({ onNext, onBack, onSkip, dir }) {
         sub="Your coach needs this to build the right plan for you." />
 
       <SectionLabel>Your name</SectionLabel>
-      <TextField value={p.name} onChange={() => {}} readOnly={true}
-        placeholder="Loading..." />
+      <TextField value={p.name} onChange={v => set({ name: v })}
+        placeholder="What should your coach call you?" />
 
       <SectionLabel>Gender</SectionLabel>
       <div className="gender-row">
@@ -47,8 +46,10 @@ export default function Step1({ onNext, onBack, onSkip, dir }) {
       </div>
 
       <SectionLabel>Date of birth</SectionLabel>
-      <div style={{ marginBottom: 4 }}>
-        <TextField type="date" value={p.dob} onChange={v => set({ dob: v })} max={todayStr} placeholder="Select date" />
+      <div className="input-row col3">
+        <input className={`input ${p.dob.d ? 'filled' : ''}`} style={{ marginBottom: 0 }} type="number" inputMode="numeric" placeholder="DD" value={p.dob.d} onChange={e => setDob({ d: e.target.value })} />
+        <input className={`input ${p.dob.m ? 'filled' : ''}`} style={{ marginBottom: 0 }} type="number" inputMode="numeric" placeholder="MM" value={p.dob.m} onChange={e => setDob({ m: e.target.value })} />
+        <input className={`input ${p.dob.y ? 'filled' : ''}`} style={{ marginBottom: 0 }} type="number" inputMode="numeric" placeholder="YYYY" value={p.dob.y} onChange={e => setDob({ y: e.target.value })} />
       </div>
       <div className={`hint ${age != null ? 'ok' : ''}`}>
         {age != null ? `Age: ${age} years` : 'Used to calculate your daily calorie target'}
@@ -60,12 +61,6 @@ export default function Step1({ onNext, onBack, onSkip, dir }) {
         <SuffixField value={p.weightKg} onChange={v => set({ weightKg: v })} placeholder="79" suffix="kg" error={!!wErr} />
       </div>
       {(hErr || wErr) && <div className="err-text"><i className="ti ti-alert-circle" /> {hErr || wErr}</div>}
-
-      <SectionLabel>Target weight &amp; date</SectionLabel>
-      <div className="input-row col2">
-        <SuffixField value={p.targetWeight} onChange={v => set({ targetWeight: v })} placeholder="70" suffix="kg" />
-        <TextField type="date" value={p.targetDate} onChange={v => set({ targetDate: v })} min={todayStr} placeholder="Select date" />
-      </div>
 
       {band && (
         <div className="bmi-strip" style={{ marginTop: 12 }}>

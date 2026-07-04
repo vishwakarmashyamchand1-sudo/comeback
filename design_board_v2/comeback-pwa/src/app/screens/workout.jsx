@@ -1,25 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Wordmark, Bar, CoachCard, Thumb, PushHeader, Sheet } from '../components.jsx';
 import { todayWorkout, tomorrow, nutrition, circle, dayTypes } from '../data.js';
-import { useOnboarding } from '../../lib/store.jsx';
 
 /* ─────────────────────────── DASHBOARD (Workout tab home) ── */
 export function Dashboard({ done, onStart, onViewSummary, onOpenCircle, goDiet, onOpenProfile, onChangeDay }) {
-  const { state } = useOnboarding();
-  const userName = state.profile?.name || 'Athlete';
-  const initial = userName.charAt(0).toUpperCase();
-
   const hour = new Date().getHours();
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const w = todayWorkout;
-  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-
-  const [dayType, setDayType] = useState(w.type);
-  const [dayOpen, setDayOpen] = useState(false);
-
-  // Dynamically generate the title based on the selected dayType
-  const dt = dayTypes.find(d => d.name.startsWith(dayType.split(' ')[0])) || dayTypes[0];
-  const dynamicTitle = `${dt.name} — ${dt.muscles.replace(/ · /g, ' & ')}`;
 
   return (
     <div className="app-body">
@@ -27,12 +14,12 @@ export function Dashboard({ done, onStart, onViewSummary, onOpenCircle, goDiet, 
         <div className="app-top">
           <div>
             <div style={{ marginBottom: 10 }}><Wordmark /></div>
-            <div className="greeting" style={{ textTransform: 'capitalize' }}>{greet}, {userName}</div>
-            <div className="subtle">{currentDay} · Week {w.week} · Day {w.day}</div>
+            <div className="greeting">{greet}, Prashant</div>
+            <div className="subtle">{w.dow} · Week {w.week} · Day {w.day}</div>
           </div>
           <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
             <button className="icon-btn"><i className="ti ti-bell" />{!done && <span className="dot-red" />}</button>
-            <button className="icon-btn" onClick={onOpenProfile} style={{ borderRadius: '50%', background: '#1A1A2E', color: '#C8F25C', border: 'none', fontSize: 14, fontWeight: 600 }}>{initial}</button>
+            <button className="icon-btn" onClick={onOpenProfile} style={{ borderRadius: '50%', background: '#1A1A2E', color: '#C8F25C', border: 'none', fontSize: 14, fontWeight: 600 }}>P</button>
           </div>
         </div>
 
@@ -48,9 +35,9 @@ export function Dashboard({ done, onStart, onViewSummary, onOpenCircle, goDiet, 
               : <span className="badge muted">Not started</span>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
-            <div style={{ fontSize: 19, fontWeight: 500, letterSpacing: '-.02em', color: '#fff' }}>{dynamicTitle}</div>
+            <div style={{ fontSize: 19, fontWeight: 500, letterSpacing: '-.02em', color: '#fff' }}>{w.title}</div>
             {!done && (
-              <div onClick={() => setDayOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 'none', background: '#ffffff14', borderRadius: 20, padding: '5px 10px', cursor: 'pointer' }}>
+              <div onClick={onChangeDay} style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 'none', background: '#ffffff14', borderRadius: 20, padding: '5px 10px', cursor: 'pointer' }}>
                 <i className="ti ti-repeat" style={{ color: '#C8F25C', fontSize: 13 }} /><span style={{ fontSize: 11, fontWeight: 500, color: '#C8F25C' }}>Change</span>
               </div>
             )}
@@ -122,7 +109,6 @@ export function Dashboard({ done, onStart, onViewSummary, onOpenCircle, goDiet, 
           </div>
         </div>
       </div>
-      {dayOpen && <ChangeDaySheet current={dayType} onClose={() => setDayOpen(false)} onPick={t => { setDayType(t); setDayOpen(false); }} />}
     </div>
   );
 }
@@ -216,6 +202,7 @@ export function WorkoutPlan({ onBack, onStart, restDay, onAddExercise }) {
                 <div style={{ display: 'flex', gap: 8, marginTop: 11, paddingTop: 11, borderTop: '1px solid #EDEDEA' }}>
                   <div onClick={() => setPickerFor(e.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 9, padding: 8, fontSize: 12, fontWeight: 500, color: '#1A1A2E', background: '#F5F5F3', cursor: 'pointer' }}><i className="ti ti-repeat" style={{ fontSize: 14 }} /> Substitute</div>
                   <div onClick={() => setState(e.id, 'skipped')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 9, padding: 8, fontSize: 12, fontWeight: 500, color: '#8A8A85', background: '#F5F5F3', cursor: 'pointer' }}><i className="ti ti-player-skip-forward" style={{ fontSize: 14 }} /> Skip</div>
+                  <div onClick={() => remove(e.id)} style={{ flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 9, padding: '8px 11px', color: '#DC2626', background: '#FEF2F2', cursor: 'pointer' }}><i className="ti ti-trash" style={{ fontSize: 14 }} /></div>
                 </div>
               </div>
             );
@@ -238,13 +225,13 @@ export function WorkoutPlan({ onBack, onStart, restDay, onAddExercise }) {
   );
 }
 
-export function ChangeDaySheet({ current, onClose, onPick }) {
+function ChangeDaySheet({ current, onClose, onPick }) {
   return (
     <Sheet onClose={onClose}>
       <div style={{ padding: '0 20px 22px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ fontSize: 18, fontWeight: 600, color: '#1A1A2E', marginBottom: 3 }}>Change today's focus</div>
         <div style={{ fontSize: 12, color: '#8A8A85', marginBottom: 16 }}>Picking a new focus reloads that group's exercises for today.</div>
-        <div className="scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="scroll" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {dayTypes.map(d => {
             const sel = current.startsWith(d.name.split(' ')[0]);
             return (
@@ -290,10 +277,17 @@ function SubstituteSheet({ onClose, onPick }) {
 export function ActiveWorkout({ onBack, onFinish, onSwap }) {
   const w = todayWorkout;
   const [idx, setIdx] = useState(0);
-    const ex = w.exercises[idx];
-    const [sets, setSets] = useState(() => w.exercises.map(e => Array.from({ length: e.sets }, () => ({ reps: '', weight: '', done: false }))));
+  const ex = w.exercises[idx];
+  const [sets, setSets] = useState(() => w.exercises.map(e => Array.from({ length: e.sets }, () => ({ reps: '', weight: '', done: false }))));
+  const [elapsed, setElapsed] = useState(34 * 60 + 12);
 
-    const cur = sets[idx];
+  useEffect(() => {
+    const t = setInterval(() => setElapsed(e => e + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const fmt = s => `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
+  const cur = sets[idx];
   const setField = (si, k, v) => setSets(prev => prev.map((rows, i) => i !== idx ? rows : rows.map((r, j) => j !== si ? r : { ...r, [k]: v })));
   const toggle = si => setSets(prev => prev.map((rows, i) => i !== idx ? rows : rows.map((r, j) => j !== si ? r : { ...r, done: !r.done })));
 
@@ -306,6 +300,10 @@ export function ActiveWorkout({ onBack, onFinish, onSwap }) {
       <div style={{ flex: 'none', padding: '12px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div><div style={{ fontSize: 16, fontWeight: 600, color: '#1A1A2E' }}>{w.type}</div><div style={{ fontSize: 12, color: '#8A8A85', marginTop: 1 }}>{idx + (cur.every(s => s.done) ? 1 : 0)} of {w.exercises.length} exercises done</div></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 500, color: '#1A1A2E' }}>{fmt(elapsed)}</span>
+            <button className="icon-btn"><i className="ti ti-player-pause" /></button>
+          </div>
         </div>
         <div className="bar" style={{ height: 5 }}><i style={{ width: `${(idx / w.exercises.length) * 100}%`, background: '#C8F25C' }} /></div>
       </div>
