@@ -1,12 +1,97 @@
 import React, { useState, useEffect } from 'react';
 import { Wordmark, Bar, CoachCard, Thumb, PushHeader } from '../components.jsx';
-import { todayWorkout, tomorrow, nutrition, circle } from '../data.js';
+import { nutrition, circle, tomorrow } from '../data.js'; // removed todayWorkout
+import { API_URL } from '../../lib/api.js';
+import { useOnboarding } from '../../lib/store.jsx';
+
+let cachedWorkout = null;
+
+export function useTodayWorkout() {
+  const { state } = useOnboarding();
+  const [w, setW] = useState(cachedWorkout);
+  const [loading, setLoading] = useState(!cachedWorkout);
+
+  useEffect(() => {
+    if (cachedWorkout) return;
+    fetch(`${API_URL}/api/workouts/today`, {
+      headers: { Authorization: `Bearer ${state.token}` }
+    })
+      .then(r => {
+        if (!r.ok && r.status === 404) return { workout: null, isRestDay: true };
+        return r.json();
+      })
+      .then(d => {
+        if (d.isRestDay || !d.workout) {
+           const rest = { restDay: true };
+           cachedWorkout = rest;
+           setW(rest);
+           setLoading(false);
+           return;
+        }
+        
+        const mapped = {
+          title: `${d.workout.sessionType} — Week ${d.workout.weekNumber}`,
+          type: d.workout.sessionType,
+          week: d.workout.weekNumber,
+          day: new Date(d.workout.date).getDate(),
+          dow: d.workout.dayOfWeek,
+          durationMin: d.workout.exercises.length * 8,
+          exercises: d.workout.exercises.map(ex => ({
+            id: ex._id,
+            name: ex.exerciseName || ex.exerciseId?.name || 'Exercise',
+            muscle: ex.muscleGroup || ex.exerciseId?.targetMuscle || 'General',
+            sets: ex.sets.length,
+            reps: ex.sets[0]?.plannedReps || 10,
+            weight: ex.sets[0]?.plannedWeight || 0,
+            why: ex.antigravityReasoning || ex.benefits || ex.exerciseId?.whyLabel || 'Builds strength and endurance.'
+          }))
+        };
+        cachedWorkout = mapped;
+        setW(mapped);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch workout:", err);
+        setLoading(false);
+      });
+  }, [state.token]);
+
+  return { w, loading };
+}
 
 /* ─────────────────────────── DASHBOARD (Workout tab home) ── */
 export function Dashboard({ done, onStart, onViewSummary, onOpenCircle, goDiet }) {
   const hour = new Date().getHours();
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const w = todayWorkout;
+  const { w, loading } = useTodayWorkout();
+
+  if (loading) {
+    return (
+      <div className="app-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="spinner" style={{ borderTopColor: '#C8F25C' }} />
+      </div>
+    );
+  }
+
+  if (w?.restDay) {
+    return (
+      <div className="app-body">
+        <div className="screen-pad scroll">
+          <div className="app-top">
+            <div>
+              <div style={{ marginBottom: 10 }}><Wordmark /></div>
+              <div className="greeting">{greet}, Prashant</div>
+              <div className="subtle">Rest Day</div>
+            </div>
+          </div>
+          <div className="card-navy" style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 19, fontWeight: 500, color: '#fff', marginBottom: 14 }}>Rest & Recovery</div>
+            <div style={{ fontSize: 13, color: '#8A8AAA', lineHeight: 1.6 }}>Your muscles rebuild today. Take a walk and hit your protein goals.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-body">
@@ -19,7 +104,6 @@ export function Dashboard({ done, onStart, onViewSummary, onOpenCircle, goDiet }
           </div>
           <button className="icon-btn"><i className="ti ti-bell" />{!done && <span className="dot-red" />}</button>
         </div>
-
         {/* workout card */}
         <div className="card-navy" style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -116,9 +200,12 @@ function Metric({ label, val, target, value, max }) {
 }
 
 /* ─────────────────────────── WORKOUT PLAN (pre-workout) ──── */
-export function WorkoutPlan({ onBack, onStart, restDay, onAddExercise }) {
-  const w = todayWorkout;
-  if (restDay) {
+export function WorkoutPlan({ onBack, onStart, onAddExercise }) {
+  const { w, loading } = useTodayWorkout();
+  
+  if (loading) return <div className="app-body" style={{display:'flex', alignItems:'center', justifyContent:'center'}}><div className="spinner"></div></div>;
+
+  if (w?.restDay) {
     return (
       <div className="app-body">
         <PushHeader title="Today's workout" onBack={onBack} right="ti-calendar" />
@@ -139,7 +226,7 @@ export function WorkoutPlan({ onBack, onStart, restDay, onAddExercise }) {
         <div style={{ fontSize: 13, color: '#8A8A85', margin: '8px 0 16px' }}>Week {w.week} · {w.dow} · {w.exercises.length} exercises</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {w.exercises.map(e => (
-            <div key={e.id} className="card" style={{ padding: 13, display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div key={e.id || e.name} className="card" style={{ padding: 13, display: 'flex', gap: 12, alignItems: 'center' }}>
               <Thumb />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
@@ -167,16 +254,24 @@ export function WorkoutPlan({ onBack, onStart, restDay, onAddExercise }) {
 
 /* ─────────────────────────── ACTIVE WORKOUT ──────────────── */
 export function ActiveWorkout({ onBack, onFinish, onSwap }) {
-  const w = todayWorkout;
+  const { w, loading } = useTodayWorkout();
   const [idx, setIdx] = useState(0);
-  const ex = w.exercises[idx];
-  const [sets, setSets] = useState(() => w.exercises.map(e => Array.from({ length: e.sets }, () => ({ reps: '', weight: '', done: false }))));
   const [elapsed, setElapsed] = useState(34 * 60 + 12);
+  const [sets, setSets] = useState([]);
+
+  useEffect(() => {
+    if (!w || loading || w.restDay || !w.exercises) return;
+    setSets(w.exercises.map(e => Array.from({ length: e.sets }, () => ({ reps: '', weight: '', done: false }))));
+  }, [w, loading]);
 
   useEffect(() => {
     const t = setInterval(() => setElapsed(e => e + 1), 1000);
     return () => clearInterval(t);
   }, []);
+
+  if (loading || !w || !sets.length || w.restDay) return <div className="app-body" style={{display:'flex', alignItems:'center', justifyContent:'center'}}><div className="spinner"></div></div>;
+
+  const ex = w.exercises[idx];
   const fmt = s => `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   const cur = sets[idx];
@@ -219,7 +314,7 @@ export function ActiveWorkout({ onBack, onFinish, onSwap }) {
               <div key={si} className={`set-row ${s.done ? 'done' : isActive ? 'active' : ''}`}>
                 <span className="set-num" style={{ color: s.done ? '#3A7A0A' : '#1A1A2E' }}>{si + 1}</span>
                 <input className="set-input" inputMode="numeric" placeholder={String(ex.reps)} value={s.reps} onChange={e => setField(si, 'reps', e.target.value)} />
-                <input className="set-input" inputMode="decimal" placeholder={ex.weight.toFixed(1)} value={s.weight} onChange={e => setField(si, 'weight', e.target.value)} />
+                <input className="set-input" inputMode="decimal" placeholder={ex.weight ? ex.weight.toFixed(1) : '0'} value={s.weight} onChange={e => setField(si, 'weight', e.target.value)} />
                 <div className={`set-check ${s.done ? 'on' : 'off'}`} onClick={() => toggle(si)}>{s.done && <i className="ti ti-check" />}</div>
               </div>
             );
