@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'comeback',
   webDir: 'dist',
   server: {
-    url: 'https://comeback-puce.vercel.app/',
+    url: 'https://comeback-frontend.vercel.app/',
     cleartext: true
   }
 };
