@@ -9,7 +9,8 @@ export function Diet({ onLogMeal }) {
   const [dietData, setDietData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -204,11 +205,18 @@ export function Diet({ onLogMeal }) {
             type="file" 
             accept="image/*" 
             capture="environment"
-            ref={fileInputRef} 
+            ref={cameraInputRef} 
             style={{ display: 'none' }} 
             onChange={handleFileChange} 
           />
-          <div onClick={() => fileInputRef.current && fileInputRef.current.click()} style={{ background: '#fff', border: '1.5px dashed #DDDDD9', borderRadius: 14, padding: 14, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', color: '#8A8A85', cursor: 'pointer' }}>
+          <input 
+            type="file" 
+            accept="image/*" 
+            ref={galleryInputRef} 
+            style={{ display: 'none' }} 
+            onChange={handleFileChange} 
+          />
+          <div onClick={() => galleryInputRef.current && galleryInputRef.current.click()} style={{ background: '#fff', border: '1.5px dashed #DDDDD9', borderRadius: 14, padding: 14, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', color: '#8A8A85', cursor: 'pointer' }}>
             <i className="ti ti-plus" style={{ fontSize: 16 }} /><span style={{ fontSize: 13, fontWeight: 500 }}>Log meal</span>
           </div>
         </div>
@@ -218,7 +226,7 @@ export function Diet({ onLogMeal }) {
         </div>
       </div>
 
-      <div className="fab" onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+      <div className="fab" onClick={() => cameraInputRef.current && cameraInputRef.current.click()}>
         <div className="fab-btn"><i className="ti ti-camera" /></div>
         <span className="fab-lbl">Log meal</span>
       </div>
