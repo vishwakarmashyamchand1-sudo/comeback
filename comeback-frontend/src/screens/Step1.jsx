@@ -8,7 +8,7 @@ import {
 
 export default function Step1({ onNext, onBack, onSkip, dir }) {
   const { state, dispatch } = useOnboarding();
-  const p = state.profile;
+  const p = state.profile || {};
   const set = value => dispatch({ type: 'patch', slice: 'profile', value });
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -20,7 +20,7 @@ export default function Step1({ onNext, onBack, onSkip, dir }) {
   const wErr = validateNum('weightKg', p.weightKg);
 
   const valid =
-    p.name.trim() && p.gender && age != null &&
+    (p.name || '').trim() && p.gender && age != null &&
     p.heightCm && p.weightKg && !hErr && !wErr &&
     p.targetWeight && p.targetDate;
 
@@ -33,7 +33,7 @@ export default function Step1({ onNext, onBack, onSkip, dir }) {
         sub="Your coach needs this to build the right plan for you." />
 
       <SectionLabel>Your name</SectionLabel>
-      <TextField value={p.name} onChange={() => {}} readOnly={true}
+      <TextField value={p.name || ''} onChange={() => {}} readOnly={true}
         placeholder="Loading..." />
 
       <SectionLabel>Gender</SectionLabel>

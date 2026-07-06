@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { PushHeader } from '../components.jsx';
 import { useOnboarding } from '../../lib/store.jsx';
+import { auth } from '../../lib/firebase.js';
+import { signOut } from 'firebase/auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -90,7 +92,8 @@ export function Profile({ onBack }) {
             'Loading profile...'
           )}
           <br /><br />
-          <button className="btn" style={{ background: '#fff', border: '1.5px solid #DDDDD9', color: '#8A8A85', marginTop: 20 }} onClick={() => {
+          <button className="btn" style={{ background: '#fff', border: '1.5px solid #DDDDD9', color: '#8A8A85', marginTop: 20 }} onClick={async () => {
+            try { await signOut(auth); } catch (e) {}
             localStorage.clear();
             window.location.reload();
           }}>
@@ -166,7 +169,8 @@ export function Profile({ onBack }) {
           ))}
         </div>
 
-        <button className="btn" style={{ background: '#fff', border: '1.5px solid #DDDDD9', color: '#8A8A85' }} onClick={() => {
+        <button className="btn" style={{ background: '#fff', border: '1.5px solid #DDDDD9', color: '#8A8A85' }} onClick={async () => {
+          try { await signOut(auth); } catch (e) {}
           localStorage.removeItem('comeback.onboarded');
           localStorage.removeItem('hasCompletedOnboarding');
           localStorage.removeItem('comeback.onboarding.v1');

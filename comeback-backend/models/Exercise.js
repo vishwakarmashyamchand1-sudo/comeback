@@ -26,6 +26,8 @@ const ExerciseSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  category: { type: String },
+  bodyPart: { type: String },
 
   // ── Media ─────────────────────────────────────
   gifUrl:      { type: String, required: true }, // Cloudflare R2 public URL

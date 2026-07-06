@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const DietLog = require('../models/DietLog');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 /**
  * Recalculate all totals at the document level
@@ -47,9 +48,9 @@ const logMeal = asyncHandler(async (req, res) => {
   const DietLog = require('../models/DietLog');
   const { mealType, photoUrl, items, aiTip } = req.body;
 
-  if (!mealType || !photoUrl || !items || !Array.isArray(items)) {
+  if (!mealType || !items || !Array.isArray(items)) {
     res.status(400);
-    throw new Error('Please provide mealType, photoUrl, and items array');
+    throw new Error('Please provide mealType and items array');
   }
 
   // Securely fetch User
@@ -471,45 +472,83 @@ const analyzePhoto = asyncHandler(async (req, res) => {
     throw new Error('Please provide a base64 photo string and mealType');
   }
 
-  // Step 76: (MOCK) Upload to Cloudflare R2
-  const photoUrl = `https://r2.comeback-app.com/food-logs/${req.user._id}/${Date.now()}/${mealType}.jpg`;
+  const User = require('../models/User');
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+  
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
 
-  // Step 77, 78, 79: (MOCK) Build Claude Vision prompt and call Claude API
-  // In a real scenario, we would pass the base64 image to Claude Vision and get this JSON back
-  const mockClaudeResponse = {
-    items: [
-      {
-        name: "Grilled Chicken Breast",
-        quantityG: 200,
-        calories: 330,
-        proteinG: 62,
-        carbsG: 0,
-        fatG: 7,
-        confidence: "High"
-      },
-      {
-        name: "Brown Rice",
-        quantityG: 150,
-        calories: 168,
-        proteinG: 3.5,
-        carbsG: 35,
-        fatG: 1.5,
-        confidence: "High"
+  // Find today's diet log to give context to AI
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const dietLog = await DietLog.findOne({ userId: user._id, date: today });
+  const consumedCalories = dietLog ? dietLog.totalCalories : 0;
+  const consumedProtein = dietLog ? dietLog.totalProteinG : 0;
+
+  // Process the base64 string
+  let base64Data = photo;
+  let mimeType = 'image/jpeg';
+  if (photo.startsWith('data:')) {
+    const matches = photo.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      mimeType = matches[1];
+      base64Data = matches[2];
+    }
+  }
+
+  try {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'mock_key');
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `You are an elite sports nutritionist. Analyze this photo of a user's ${mealType}.
+User's diet preferences: ${user.dietType || 'None'}, Restrictions: ${(user.foodRestrictions || []).join(', ')}.
+They have consumed ${consumedCalories} kcal and ${consumedProtein}g of protein so far today.
+Return ONLY a valid JSON object with no markdown block formatting. The JSON must exactly match this schema:
+{
+  "items": [
+    {
+      "name": "String (e.g. Grilled Chicken)",
+      "quantityG": Number (estimated grams),
+      "calories": Number,
+      "proteinG": Number,
+      "carbsG": Number,
+      "fatG": Number,
+      "confidence": "String (high, medium, or low)"
+    }
+  ],
+  "totalCalories": Number,
+  "totalProteinG": Number,
+  "oneTip": "String (A single short, encouraging tip based on the meal and their day's progress)"
+}`;
+
+    const imageParts = [{
+      inlineData: {
+        data: base64Data,
+        mimeType: mimeType
       }
-    ],
-    totalCalories: 498,
-    totalProteinG: 65.5,
-    oneTip: "Great protein intake! Consider adding some greens for fiber."
-  };
+    }];
 
-  // Step 80: Return items, totals, tip, and photoUrl (Step 81: DO NOT save to DietLog yet!)
-  res.status(200).json({
-    items: mockClaudeResponse.items,
-    totalCalories: mockClaudeResponse.totalCalories,
-    totalProteinG: mockClaudeResponse.totalProteinG,
-    oneTip: mockClaudeResponse.oneTip,
-    photoUrl: photoUrl
-  });
+    console.log('[Antigravity] Sending image to Gemini for nutrition analysis...');
+    const result = await model.generateContent([prompt, ...imageParts]);
+    const responseText = result.response.text().trim();
+    
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    const parsedData = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(responseText);
+
+    res.status(200).json({
+      items: parsedData.items || [],
+      totalCalories: parsedData.totalCalories || 0,
+      totalProteinG: parsedData.totalProteinG || 0,
+      oneTip: parsedData.oneTip || "",
+      photoUrl: null // As requested, no permanent storage
+    });
+  } catch (error) {
+    console.error("AI Photo Analysis Error:", error);
+    res.status(500);
+    throw new Error("Failed to analyze photo with AI.");
+  }
 });
 
 module.exports = {
