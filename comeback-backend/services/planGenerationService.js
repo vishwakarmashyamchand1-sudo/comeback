@@ -10,7 +10,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'mock_key');
 const generateWeek1Plan = async (user, baselineData, isRetry = false) => {
   try {
     console.log('[Antigravity] Generating 7-day Week 1 plan...');
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
     
     // Call 01 Prompt (Returning User with Baseline) vs Call 02 Prompt (Beginner)
     const isReturning = baselineData && Object.keys(baselineData).length > 0;
@@ -126,7 +126,41 @@ Generate the strict JSON response.`;
   }
 };
 
+// 3. Generate Daily Nutrition Tip
+const generateDietTip = async (mealsData, totals, proteinAvg) => {
+  try {
+    console.log('[Antigravity] Generating daily nutrition tip...');
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+    
+    let prompt = `You are Comeback, an elite personal trainer and nutritionist.
+The user has logged their meals for today. Provide a SINGLE, concise 1-2 sentence nutrition tip or encouraging remark.
+Do NOT use markdown, emojis, or formatting. Just plain text.
+
+Today's Running Totals:
+- Calories: ${Math.round(totals.calories || 0)} kcal
+- Protein: ${Math.round(totals.proteinG || 0)}g
+- Carbs: ${Math.round(totals.carbsG || 0)}g
+- Fats: ${Math.round(totals.fatG || 0)}g
+- Water: ${totals.waterGlasses || 0} glasses
+
+Today's Meals:
+${mealsData.map(m => `- ${m.mealType}: ${m.totalCalories} kcal, ${m.totalProteinG}g protein. Items: ${m.items.map(it => it.name).join(', ')}`).join('\n')}
+
+Last 3-Day Protein Average: ${Math.round(proteinAvg || 0)}g
+
+Give a specific, practical, and highly personalized tip based on this data.`;
+
+    const result = await model.generateContent(prompt);
+    const tip = result.response.text().trim();
+    return tip;
+  } catch (error) {
+    console.error("[Antigravity Error]:", error);
+    return "Keep up the great work with your nutrition today!"; // Fallback tip
+  }
+};
+
 module.exports = {
   generateWeek1Plan,
-  generateTomorrowPlan
+  generateTomorrowPlan,
+  generateDietTip
 };

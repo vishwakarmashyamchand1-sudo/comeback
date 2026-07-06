@@ -63,6 +63,8 @@ input, button, textarea { font-family: var(--font-ui); }
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  padding-top: env(safe-area-inset-top);
+  border-top: 6px solid var(--c-navy);
 }
 @media (min-width: 460px) {
   body { display: flex; align-items: center; justify-content: center; padding: 24px; }

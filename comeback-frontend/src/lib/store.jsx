@@ -58,7 +58,11 @@ function reducer(state, action) {
     case 'back':  return { ...state, step: action.step, dir: 'back' };
     case 'reset': return { ...initial };
     case 'logout': 
-      try { localStorage.removeItem(STORAGE_KEY); } catch(e){}
+      try { 
+        localStorage.removeItem(STORAGE_KEY); 
+        localStorage.removeItem('hasCompletedOnboarding');
+        localStorage.removeItem('comeback.onboarded');
+      } catch(e){}
       return { ...initial };
     default: return state;
   }
@@ -74,19 +78,40 @@ export function OnboardingProvider({ children }) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
   }, [state]);
 
-  // Listen to Firebase token refreshes in the background!
-  useEffect(() => {
-    // Firebase automatically persists the session. We just listen for token changes.
-    
-    const unsub = onIdTokenChanged(auth, async (user) => {
-      if (user) {
-        // Firebase automatically gets a fresh token right before the old one expires
-        const freshToken = await user.getIdToken();
-        dispatch({ type: 'login_success', token: freshToken });
-      }
-    });
-    return unsub;
-  }, []);
+    // Listen to Firebase token refreshes in the background!
+    useEffect(() => {
+      // Firebase automatically persists the session. We just listen for token changes.
+      const unsub = onIdTokenChanged(auth, async (user) => {
+        if (user) {
+          const freshToken = await user.getIdToken();
+          
+          try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${apiUrl}/api/auth/me`, {
+              headers: { 'Authorization': `Bearer ${freshToken}` }
+            });
+            const data = await res.json();
+            
+            if (res.ok && data.user) {
+              if (data.user.onboardingComplete) {
+                localStorage.setItem('hasCompletedOnboarding', 'true');
+                localStorage.setItem('comeback.onboarded', '1');
+                // Trigger a full app re-render to Root's AppShell if we just discovered they are onboarded
+                if (window.location.pathname !== '/' && window.location.pathname !== '/home') {
+                   // Or just let App.jsx handle the redirect since we set hasCompletedOnboarding
+                }
+              }
+              dispatch({ type: 'login_success', token: freshToken, user: data.user });
+            } else {
+              dispatch({ type: 'login_success', token: freshToken });
+            }
+          } catch (e) {
+            dispatch({ type: 'login_success', token: freshToken });
+          }
+        }
+      });
+      return unsub;
+    }, []);
 
   return <Ctx.Provider value={{ state, dispatch }}>{children}</Ctx.Provider>;
 }

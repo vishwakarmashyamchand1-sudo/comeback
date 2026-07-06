@@ -57,10 +57,10 @@ export default function Step2({ onNext, onBack, onSkip, dir }) {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {[
-                    { id: 'chestPressKg', label: 'Chest Press' },
-                    { id: 'shoulderPressKg', label: 'Shoulder Press' },
-                    { id: 'squatKg', label: 'Squat' },
-                    { id: 'deadliftKg', label: 'Deadlift' }
+                    { id: 'chestPressKg', label: 'Chest Press (kg)' },
+                    { id: 'shoulderPressKg', label: 'Shoulder Press (kg)' },
+                    { id: 'squatKg', label: 'Squat (kg)' },
+                    { id: 'deadliftKg', label: 'Deadlift (kg)' }
                   ].map(lift => (
                     <div key={lift.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-text-primary)' }}>{lift.label}</div>

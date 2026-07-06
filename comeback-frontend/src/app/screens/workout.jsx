@@ -24,6 +24,25 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
     ? `${dt.name} — ${dt.muscles ? dt.muscles.replace(/ · /g, ' & ') : 'Rest Day'}`
     : safeDayType.charAt(0).toUpperCase() + safeDayType.slice(1);
 
+  const [dietData, setDietData] = useState(null);
+
+  useEffect(() => {
+    async function fetchDiet() {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/diet/today`, {
+          headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        const data = await res.json();
+        setDietData(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    if (state.token) {
+      fetchDiet();
+    }
+  }, [state.token]);
+
   return (
     <div className="app-body">
       <div className="screen-pad scroll">
@@ -96,15 +115,15 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
             <span style={{ fontSize: 12, fontWeight: 500, color: '#1A1A2E', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }} onClick={goDiet}><i className="ti ti-plus" /> Log meal</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Metric label="Calories" val={done ? '1,640' : '0'} target="2,000 kcal" value={done ? 1640 : 0} max={2000} />
-            <Metric label="Protein" val={done ? '94' : '0'} target="130g" value={done ? 94 : 0} max={130} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}><span style={{ color: '#1A1A2E', fontWeight: 500 }}>Water</span><span style={{ color: '#8A8A85' }}>{done ? 6 : 0} / 8 glasses</span></div>
+            <Metric label="Calories" val={dietData?.runningTotals?.calories?.toLocaleString() || '0'} target={`${dietData?.targets?.dailyCalorieTarget || 2000} kcal`} value={dietData?.runningTotals?.calories || 0} max={dietData?.targets?.dailyCalorieTarget || 2000} />
+            <Metric label="Protein" val={dietData?.runningTotals?.proteinG || '0'} target={`${dietData?.targets?.dailyProteinTarget || 130}g`} value={dietData?.runningTotals?.proteinG || 0} max={dietData?.targets?.dailyProteinTarget || 130} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}><span style={{ color: '#1A1A2E', fontWeight: 500 }}>Water</span><span style={{ color: '#8A8A85' }}>{dietData?.runningTotals?.waterGlasses || 0} / 8 glasses</span></div>
           </div>
         </div>
 
         {/* coach */}
         <div style={{ marginBottom: 14 }}>
-          <CoachCard>{done ? 'Protein is 36g short. Add paneer or 2 eggs at dinner to close the gap.' : "Day 2 of your comeback. Ease in today — hit the planned weights, don't chase PRs yet."}</CoachCard>
+          <CoachCard>{dietData?.dietLog?.dailyCoachTip || "Day 2 of your comeback. Ease in today — hit the planned weights, don't chase PRs yet."}</CoachCard>
         </div>
 
         {/* circle */}

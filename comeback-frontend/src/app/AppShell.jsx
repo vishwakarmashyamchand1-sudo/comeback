@@ -17,6 +17,7 @@ export default function AppShell() {
   const [weeklyPlanSplit, setWeeklyPlanSplit] = useState([]);
   const [loading, setLoading] = useState(true);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [refreshDiet, setRefreshDiet] = useState(0);
 
   const push = s => setStack(st => [...st, s]);
   const pop = () => setStack(st => st.slice(0, -1));
@@ -132,14 +133,14 @@ export default function AppShell() {
       push('modify_plan'); 
     }} 
   />;
-  if (top === 'food') overlay = <FoodPhoto photo={capturedPhoto} onBack={() => { setCapturedPhoto(null); pop(); }} onConfirm={() => { setCapturedPhoto(null); pop(); }} />;
+  if (top === 'food') overlay = <FoodPhoto photo={capturedPhoto} onBack={() => { setCapturedPhoto(null); pop(); }} onConfirm={() => { setCapturedPhoto(null); pop(); setRefreshDiet(k => k + 1); }} />;
   if (top === 'circle') overlay = <Circle onBack={pop} />;
   if (top === 'browser') overlay = <ExerciseBrowser onClose={pop} initialFilter={browserMuscle} onAdd={handleAddExercise} />;
   if (top === 'profile') overlay = <Profile onBack={pop} />;
 
   let tabScreen;
   if (tab === 'workout') tabScreen = <Dashboard workout={workout} weeklyPlanSplit={weeklyPlanSplit} done={workoutDone} onStart={() => push('plan')} onViewSummary={() => setStack(['post'])} onOpenCircle={() => push('circle')} goDiet={() => setTab('diet')} onOpenProfile={() => push('profile')} onChangeDay={() => push('plan')} onFocusChange={fetchWorkoutByOffset} />;
-  if (tab === 'diet') tabScreen = <Diet onLogMeal={(photoData) => { setCapturedPhoto(photoData); push('food'); }} />;
+  if (tab === 'diet') tabScreen = <Diet key={refreshDiet} onLogMeal={(photoData) => { setCapturedPhoto(photoData); push('food'); }} />;
   if (tab === 'coach') tabScreen = <Coach />;
   if (tab === 'progress') tabScreen = <Progress />;
 

@@ -1,0 +1,420 @@
+[
+  {
+    "sourceId": "0172",
+    "name": "Cable Incline Pushdown",
+    "nameSlug": "cable-incline-pushdown",
+    "muscleGroup": "Triceps",
+    "targetMuscle": "triceps",
+    "secondaryMuscles": [],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0172-1PK5Uo3.gif",
+    "gifFileName": "videos/0172-1PK5Uo3.gif",
+    "whyLabel": "Builds triceps strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "triceps",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable incline pushdown using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0205",
+    "name": "Cable Rear Pulldown",
+    "nameSlug": "cable-rear-pulldown",
+    "muscleGroup": "Back",
+    "targetMuscle": "latissimus dorsi",
+    "secondaryMuscles": [
+      "biceps"
+    ],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0205-SpsOSXk.gif",
+    "gifFileName": "videos/0205-SpsOSXk.gif",
+    "whyLabel": "Builds back strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "back",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable rear pulldown using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0244",
+    "name": "Cable Twisting Pull",
+    "nameSlug": "cable-twisting-pull",
+    "muscleGroup": "Back",
+    "targetMuscle": "general",
+    "secondaryMuscles": [],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0244-zCgxPbV.gif",
+    "gifFileName": "videos/0244-zCgxPbV.gif",
+    "whyLabel": "Builds back strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "back",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable twisting pull using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0245",
+    "name": "Cable Underhand Pulldown",
+    "nameSlug": "cable-underhand-pulldown",
+    "muscleGroup": "Back",
+    "targetMuscle": "latissimus dorsi",
+    "secondaryMuscles": [
+      "biceps"
+    ],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0245-xBYcQHj.gif",
+    "gifFileName": "videos/0245-xBYcQHj.gif",
+    "whyLabel": "Builds back strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "back",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable underhand pulldown using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0861",
+    "name": "Cable Seated Row",
+    "nameSlug": "cable-seated-row",
+    "muscleGroup": "Back",
+    "targetMuscle": "latissimus dorsi",
+    "secondaryMuscles": [
+      "biceps"
+    ],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0861-fUBheHs.gif",
+    "gifFileName": "videos/0861-fUBheHs.gif",
+    "whyLabel": "Builds back strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "back",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable seated row using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0007",
+    "name": "Alternate Lateral Pulldown",
+    "nameSlug": "alternate-lateral-pulldown",
+    "muscleGroup": "Back",
+    "targetMuscle": "latissimus dorsi",
+    "secondaryMuscles": [
+      "biceps"
+    ],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0007-4IKbhHV.gif",
+    "gifFileName": "videos/0007-4IKbhHV.gif",
+    "whyLabel": "Builds back strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "back",
+      "cable"
+    ],
+    "instructionsEn": "Perform the alternate lateral pulldown using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0245",
+    "name": "Cable Underhand Pulldown",
+    "nameSlug": "cable-underhand-pulldown",
+    "muscleGroup": "Back",
+    "targetMuscle": "latissimus dorsi",
+    "secondaryMuscles": [
+      "biceps"
+    ],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0245-xBYcQHj.gif",
+    "gifFileName": "videos/0245-xBYcQHj.gif",
+    "whyLabel": "Builds back strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "back",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable underhand pulldown using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0205",
+    "name": "Cable Rear Pulldown",
+    "nameSlug": "cable-rear-pulldown",
+    "muscleGroup": "Back",
+    "targetMuscle": "latissimus dorsi",
+    "secondaryMuscles": [
+      "biceps"
+    ],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0205-SpsOSXk.gif",
+    "gifFileName": "videos/0205-SpsOSXk.gif",
+    "whyLabel": "Builds back strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "back",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable rear pulldown using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "1324",
+    "name": "Cable Upper Row",
+    "nameSlug": "cable-upper-row",
+    "muscleGroup": "Back",
+    "targetMuscle": "latissimus dorsi",
+    "secondaryMuscles": [
+      "biceps"
+    ],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1324-PQStVXH.gif",
+    "gifFileName": "videos/1324-PQStVXH.gif",
+    "whyLabel": "Builds back strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "back",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable upper row using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "1375",
+    "name": "Cable Standing Calf Raise",
+    "nameSlug": "cable-standing-calf-raise",
+    "muscleGroup": "Calves",
+    "targetMuscle": "calves",
+    "secondaryMuscles": [],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1375-yl2IYyy.gif",
+    "gifFileName": "videos/1375-yl2IYyy.gif",
+    "whyLabel": "Builds calves strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "calves",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable standing calf raise using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "1376",
+    "name": "Cable Standing One Leg Calf Raise",
+    "nameSlug": "cable-standing-one-leg-calf-raise",
+    "muscleGroup": "Calves",
+    "targetMuscle": "calves",
+    "secondaryMuscles": [],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1376-fgc9Xdl.gif",
+    "gifFileName": "videos/1376-fgc9Xdl.gif",
+    "whyLabel": "Builds calves strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "calves",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable standing one leg calf raise using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0175",
+    "name": "Cable Kneeling Crunch",
+    "nameSlug": "cable-kneeling-crunch",
+    "muscleGroup": "Core",
+    "targetMuscle": "abdominals",
+    "secondaryMuscles": [
+      "obliques"
+    ],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0175-WW95auq.gif",
+    "gifFileName": "videos/0175-WW95auq.gif",
+    "whyLabel": "Builds core strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "core",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable kneeling crunch using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0212",
+    "name": "Cable Seated Crunch",
+    "nameSlug": "cable-seated-crunch",
+    "muscleGroup": "Core",
+    "targetMuscle": "abdominals",
+    "secondaryMuscles": [
+      "obliques"
+    ],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0212-8xUv4J7.gif",
+    "gifFileName": "videos/0212-8xUv4J7.gif",
+    "whyLabel": "Builds core strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "core",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable seated crunch using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0226",
+    "name": "Cable Standing Crunch",
+    "nameSlug": "cable-standing-crunch",
+    "muscleGroup": "Core",
+    "targetMuscle": "abdominals",
+    "secondaryMuscles": [
+      "obliques"
+    ],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0226-jpgqxiS.gif",
+    "gifFileName": "videos/0226-jpgqxiS.gif",
+    "whyLabel": "Builds core strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "core",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable standing crunch using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0873",
+    "name": "Cable Reverse Crunch",
+    "nameSlug": "cable-reverse-crunch",
+    "muscleGroup": "Core",
+    "targetMuscle": "abdominals",
+    "secondaryMuscles": [
+      "obliques"
+    ],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0873-RqOtqD7.gif",
+    "gifFileName": "videos/0873-RqOtqD7.gif",
+    "whyLabel": "Builds core strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "core",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable reverse crunch using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0247",
+    "name": "Cable Wrist Curl",
+    "nameSlug": "cable-wrist-curl",
+    "muscleGroup": "Forearms",
+    "targetMuscle": "forearms",
+    "secondaryMuscles": [],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0247-LrV4s90.gif",
+    "gifFileName": "videos/0247-LrV4s90.gif",
+    "whyLabel": "Builds forearms strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "forearms",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable wrist curl using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0210",
+    "name": "Cable Reverse Wrist Curl",
+    "nameSlug": "cable-reverse-wrist-curl",
+    "muscleGroup": "Forearms",
+    "targetMuscle": "forearms",
+    "secondaryMuscles": [],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0210-eYmsEPR.gif",
+    "gifFileName": "videos/0210-eYmsEPR.gif",
+    "whyLabel": "Builds forearms strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "forearms",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable reverse wrist curl using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  },
+  {
+    "sourceId": "0224",
+    "name": "Cable Standing Back Wrist Curl",
+    "nameSlug": "cable-standing-back-wrist-curl",
+    "muscleGroup": "Forearms",
+    "targetMuscle": "forearms",
+    "secondaryMuscles": [],
+    "equipment": "cable",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/0224-VhX2JdE.gif",
+    "gifFileName": "videos/0224-VhX2JdE.gif",
+    "whyLabel": "Builds forearms strength and endurance",
+    "beginnerTip": "Focus on controlled movements and full range of motion",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "strength",
+      "forearms",
+      "cable"
+    ],
+    "instructionsEn": "Perform the cable standing back wrist curl using a cable machine. Adjust the weight to your fitness level.",
+    "isActive": true
+  }
+]

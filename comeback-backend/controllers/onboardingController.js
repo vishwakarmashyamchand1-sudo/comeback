@@ -258,7 +258,7 @@ const completeOnboarding = asyncHandler(async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Claude API failed. Returning fallback template plan.",
+      message: "AI API failed. Returning fallback template plan.",
       weekPlan: weekPlan,
       user: user,
       coachNote: coachNote

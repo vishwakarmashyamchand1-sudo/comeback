@@ -15,8 +15,36 @@ export function Diet({ onLogMeal }) {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        onLogMeal(reader.result);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const max_size = 800;
+
+          if (width > height) {
+            if (width > max_size) {
+              height *= max_size / width;
+              width = max_size;
+            }
+          } else {
+            if (height > max_size) {
+              width *= max_size / height;
+              height = max_size;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Compress to JPEG with 0.8 quality
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          onLogMeal(compressedDataUrl);
+        };
+        img.src = event.target.result;
       };
       reader.readAsDataURL(file);
     }
@@ -36,7 +64,28 @@ export function Diet({ onLogMeal }) {
         setLoading(false);
       }
     }
-    if (state.token) fetchDiet();
+    
+    async function fetchTip() {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/diet/tip`, {
+          headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+        const tipData = await res.json();
+        if (tipData.tip) {
+          setDietData(prev => prev ? { 
+            ...prev, 
+            dietLog: { ...(prev.dietLog || {}), dailyCoachTip: tipData.tip } 
+          } : prev);
+        }
+      } catch (err) {
+        console.error("Failed to fetch tip:", err);
+      }
+    }
+
+    if (state.token) {
+      fetchDiet();
+      fetchTip();
+    }
   }, [state.token]);
 
   const handleSetWater = async (glasses) => {
@@ -196,6 +245,7 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
   const [mealType, setMealType] = useState(defaultMeal);
   
   const [detectedMeal, setDetectedMeal] = useState({ items: [], tip: '' });
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (!photo) {
@@ -261,24 +311,38 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
         fatG: it.fat || 0
       }));
 
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/diet/log-meal`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/diet/log-meal`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${state.token}`
         },
         body: JSON.stringify({ 
-          mealType, 
+          mealType: mealType.toLowerCase(), 
           items: itemsPayload,
           aiTip: detectedMeal.tip
         })
       });
       
+      if (!res.ok) {
+        const errText = await res.text();
+        alert(`Failed to log meal to server: ${errText}`);
+        return;
+      }
+
       onConfirm();
     } catch (e) {
       console.error("Failed to log meal:", e);
       onConfirm();
     }
+  };
+
+  const handleItemChange = (index, field, value) => {
+    setDetectedMeal(prev => {
+      const newItems = [...prev.items];
+      newItems[index] = { ...newItems[index], [field]: value };
+      return { ...prev, items: newItems };
+    });
   };
 
   const confIcon = { high: <i className="ti ti-circle-check-filled" style={{ fontSize: 15, color: '#3A7A0A' }} />, medium: <span style={{ fontSize: 13, color: '#D97706', fontWeight: 600 }}>~</span>, low: <span style={{ fontSize: 13, color: '#8A8A85', fontWeight: 600 }}>?</span> };
@@ -311,7 +375,7 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
       <div className="screen-pad scroll" style={{ paddingTop: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <div style={{ width: 52, height: 52, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6A6A5A', fontSize: 20, flex: 'none', ...bgStyle }}>{!photo && <i className="ti ti-photo" />}</div>
-          <div style={{ fontSize: 12, color: '#8A8A85' }}>Tap any item to correct it</div>
+
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
           {['Breakfast', 'Lunch', 'Snack', 'Dinner'].map(t => (
@@ -319,13 +383,28 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
           ))}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 14 }}>
-          {detectedMeal.items.map(it => (
-            <div key={it.name} className="card" style={{ borderRadius: 14, padding: 13 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span style={{ fontSize: 14, fontWeight: 600, color: '#1A1A2E' }}>{it.name}</span>{confIcon[it.conf]}</div>
-                <span style={{ fontSize: 12, color: '#8A8A85' }}>{it.qty}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 14, fontSize: 12, color: '#8A8A85' }}><span>{it.kcal} kcal</span><span>{it.protein}g protein</span></div>
+          {detectedMeal.items.map((it, idx) => (
+            <div key={idx} className="card" style={{ borderRadius: 14, padding: 13 }}>
+              {isEditing ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input type="text" value={it.name} onChange={(e) => handleItemChange(idx, 'name', e.target.value)} style={{ flex: 1, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none' }} placeholder="Item name" />
+                    <input type="text" value={it.qty} onChange={(e) => handleItemChange(idx, 'qty', e.target.value)} style={{ width: 70, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none' }} placeholder="Qty" />
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="number" value={it.kcal} onChange={(e) => handleItemChange(idx, 'kcal', parseInt(e.target.value) || 0)} style={{ width: 70, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none' }} /> <span style={{ fontSize: 12, color: '#8A8A85' }}>kcal</span>
+                    <input type="number" value={it.protein} onChange={(e) => handleItemChange(idx, 'protein', parseInt(e.target.value) || 0)} style={{ width: 70, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none', marginLeft: 8 }} /> <span style={{ fontSize: 12, color: '#8A8A85' }}>g protein</span>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><span style={{ fontSize: 14, fontWeight: 600, color: '#1A1A2E' }}>{it.name}</span>{confIcon[it.conf]}</div>
+                    <span style={{ fontSize: 12, color: '#8A8A85' }}>{it.qty}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 14, fontSize: 12, color: '#8A8A85' }}><span>{it.kcal} kcal</span><span>{it.protein}g protein</span></div>
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -337,7 +416,7 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
       </div>
       <div className="sticky-cta" style={{ display: 'flex', gap: 8 }}>
         <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleConfirm}>Confirm &amp; log</button>
-        <button className="btn" style={{ flex: 'none', padding: '15px 18px', background: '#fff', border: '1.5px solid #1A1A2E', color: '#1A1A2E' }}>Edit</button>
+        <button className="btn" style={{ flex: 'none', padding: '15px 18px', background: isEditing ? '#1A1A2E' : '#fff', border: '1.5px solid #1A1A2E', color: isEditing ? '#C8F25C' : '#1A1A2E' }} onClick={() => setIsEditing(!isEditing)}>{isEditing ? 'Done' : 'Edit'}</button>
       </div>
     </div>
   );

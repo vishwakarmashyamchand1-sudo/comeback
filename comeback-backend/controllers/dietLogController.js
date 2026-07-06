@@ -144,11 +144,58 @@ const logMeal = asyncHandler(async (req, res) => {
 
 // Helper for Step 87: Async trigger
 const generateDailyNutritionTipAsync = async (userId, dietLogId) => {
-  // In a real app, this calls Claude (Call 07)
-  console.log(`[BACKGROUND] Triggering Claude AI for 2nd meal nutrition tip... User: ${userId}`);
+  try {
+    const DietLog = require('../models/DietLog');
+    const { generateDietTip } = require('../services/planGenerationService');
+    
+    console.log(`[BACKGROUND] Triggering Gemini AI for 2nd meal nutrition tip... User: ${userId}`);
+    const dietLog = await DietLog.findById(dietLogId);
+    if (!dietLog) return;
+    
+    // Check if tip already generated today
+    if (dietLog.dailyCoachTip && dietLog.dailyTipGeneratedAt) {
+      const generatedDate = new Date(dietLog.dailyTipGeneratedAt);
+      generatedDate.setUTCHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      if (generatedDate.getTime() === today.getTime()) {
+        return; // Already generated
+      }
+    }
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const threeDaysAgo = new Date(today);
+    threeDaysAgo.setDate(today.getDate() - 3);
+
+    const pastLogs = await DietLog.find({
+      userId: userId,
+      date: { $gte: threeDaysAgo, $lt: today }
+    });
+
+    let totalPastProtein = 0;
+    pastLogs.forEach(log => {
+      totalPastProtein += (log.totalProteinG || 0);
+    });
+    const avgProtein = pastLogs.length > 0 ? totalPastProtein / pastLogs.length : 0;
+
+    const runningTotals = {
+      calories: dietLog.totalCalories,
+      proteinG: dietLog.totalProteinG,
+      carbsG: dietLog.totalCarbsG,
+      fatG: dietLog.totalFatG,
+      waterGlasses: dietLog.waterGlasses
+    };
+
+    const newTip = await generateDietTip(dietLog.meals || [], runningTotals, avgProtein);
+    dietLog.dailyCoachTip = newTip;
+    dietLog.dailyTipGeneratedAt = new Date();
+    await dietLog.save();
+    console.log(`[BACKGROUND] Tip generated and saved!`);
+  } catch (error) {
+    console.error("Async AI Tip Failed:", error);
+  }
 };
-
-
 /**
  * @desc    2. Update a specific meal
  * @route   PATCH /api/diet/meal/:mealId
@@ -442,11 +489,35 @@ const getDietTip = asyncHandler(async (req, res) => {
     }
   }
 
-  // Step 94 & 95: (MOCK) Call Claude API to generate a new tip
-  const mockNewTip = "Your protein intake has been perfectly consistent over the last 3 days! Remember to hydrate around your workout window today to maximize recovery.";
+  // Step 94: Calculate last 3 days protein average
+  const threeDaysAgo = new Date(today);
+  threeDaysAgo.setDate(today.getDate() - 3);
+
+  const pastLogs = await DietLog.find({
+    userId: user._id,
+    date: { $gte: threeDaysAgo, $lt: today }
+  });
+
+  let totalPastProtein = 0;
+  pastLogs.forEach(log => {
+    totalPastProtein += (log.totalProteinG || 0);
+  });
+  const avgProtein = pastLogs.length > 0 ? totalPastProtein / pastLogs.length : 0;
+
+  const runningTotals = {
+    calories: dietLog.totalCalories,
+    proteinG: dietLog.totalProteinG,
+    carbsG: dietLog.totalCarbsG,
+    fatG: dietLog.totalFatG,
+    waterGlasses: dietLog.waterGlasses
+  };
+
+  // Step 95: Call API to generate a new tip
+  const { generateDietTip } = require('../services/planGenerationService');
+  const newTip = await generateDietTip(dietLog.meals || [], runningTotals, avgProtein);
   const generationTime = new Date();
 
-  dietLog.dailyCoachTip = mockNewTip;
+  dietLog.dailyCoachTip = newTip;
   dietLog.dailyTipGeneratedAt = generationTime;
 
   // Save the new tip to the database so it gets cached for the rest of the day
@@ -454,7 +525,7 @@ const getDietTip = asyncHandler(async (req, res) => {
 
   // Step 96: Return the newly generated tip
   res.status(200).json({
-    tip: mockNewTip,
+    tip: newTip,
     generatedAt: generationTime
   });
 });
@@ -544,8 +615,10 @@ Return ONLY a valid JSON object with no markdown block formatting. The JSON must
     });
   } catch (error) {
     console.error("AI Photo Analysis Error:", error);
-    res.status(500);
-    throw new Error("Failed to analyze photo with AI.");
+    res.status(500).json({
+      message: "Failed to analyze photo with AI.",
+      error: error.message || error.toString()
+    });
   }
 });
 
