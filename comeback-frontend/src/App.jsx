@@ -85,17 +85,6 @@ export default function App({ onEnterApp }) {
             body: JSON.stringify({ step_number: step, data: payloadData })
           });
         }
-        
-        if (step === 5) {
-          await fetch(`${API_URL}/api/onboarding/complete`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${state.token}`
-            },
-            body: JSON.stringify({})
-          });
-        }
       } catch (err) {
         console.error("API sync failed", err);
       }

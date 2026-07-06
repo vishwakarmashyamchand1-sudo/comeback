@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useOnboarding } from '../lib/store.jsx';
-import { API_URL } from '../lib/api.js';
 
 const STEPS = [
   { label: 'Analysing your profile',        icon: 'user' },
@@ -13,118 +12,45 @@ const STEPS = [
 export default function Generating({ onDone }) {
   const { state } = useOnboarding();
   const [active, setActive] = useState(0);
+  const [apiDone, setApiDone] = useState(false);
+  const fetched = useRef(false);
   const name = state.profile.name || 'there';
-  const hasStarted = useRef(false);
 
   useEffect(() => {
-    if (hasStarted.current) return;
-    hasStarted.current = true;
+    if (fetched.current) return;
+    fetched.current = true;
+    
+    // 1. Fire off the backend AI generation
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/onboarding/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: JSON.stringify({})
+    }).then(res => res.json())
+      .then(data => {
+        console.log("AI Generation complete:", data);
+        setApiDone(true);
+      })
+      .catch(err => {
+        console.error("AI Generation failed:", err);
+        setApiDone(true); // proceed anyway on failure to show fallback
+      });
+  }, [state.token]);
 
-    async function processOnboarding() {
-      try {
-        const headers = {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${state.token}`
-        };
-
-        // Step 1: Profile
-        setActive(0);
-        await fetch(`${API_URL}/api/onboarding/profile`, {
-          method: 'PATCH', headers,
-          body: JSON.stringify({
-            step_number: 1,
-            data: {
-              gender: state.profile.gender,
-              heightCm: state.profile.heightCm,
-              currentWeightKg: state.profile.weightKg,
-              targetWeightKg: state.profile.targetWeight,
-              targetDate: state.profile.targetDate,
-              dateOfBirth: state.profile.dob
-            }
-          })
-        });
-
-        // Step 2: Background
-        setActive(1);
-        await fetch(`${API_URL}/api/onboarding/profile`, {
-          method: 'PATCH', headers,
-          body: JSON.stringify({
-            step_number: 2,
-            data: {
-              fitnessLevel: state.background.level,
-              lastActivePeriod: state.background.lastActive,
-              equipmentAccess: state.background.location,
-              daysPerWeek: state.background.daysPerWeek,
-              preferredTime: state.background.time,
-              strongestMuscle: state.background.strongest,
-              weakestMuscle: state.background.weakest
-            }
-          })
-        });
-
-        // Step 3: Goal
-        setActive(2);
-        await fetch(`${API_URL}/api/onboarding/profile`, {
-          method: 'PATCH', headers,
-          body: JSON.stringify({
-            step_number: 3,
-            data: {
-              primaryGoal: state.goal.goal,
-              motivationEvent: state.goal.event,
-              urgencyLevel: state.goal.urgency
-            }
-          })
-        });
-
-        // Step 4: Diet
-        setActive(3);
-        await fetch(`${API_URL}/api/onboarding/profile`, {
-          method: 'PATCH', headers,
-          body: JSON.stringify({
-            step_number: 4,
-            data: {
-              dietType: state.diet.type,
-              foodRestrictions: state.diet.restrictions,
-              supplementsTaken: state.diet.supplements
-            }
-          })
-        });
-
-        // Step 5: Health & Finalise AI Plan
-        setActive(4);
-        await fetch(`${API_URL}/api/onboarding/profile`, {
-          method: 'PATCH', headers,
-          body: JSON.stringify({
-            step_number: 5,
-            data: {
-              injuries: state.health.injuries,
-              medicalConditions: state.health.conditions,
-              exercisesToAvoid: state.health.avoid
-            }
-          })
-        });
-
-        // Complete Onboarding - Triggers Gemini AI Generation!
-        const res = await fetch(`${API_URL}/api/onboarding/complete`, {
-          method: 'POST', headers,
-          body: JSON.stringify({})
-        });
-        
-        if (!res.ok) throw new Error('Failed to generate AI plan');
-
-        setActive(5); // all done
-        setTimeout(onDone, 900);
-
-      } catch (err) {
-        console.error('Onboarding Error:', err);
-        // Fallback or show error
-        setActive(5);
-        setTimeout(onDone, 1000);
+  useEffect(() => {
+    // 2. Control the fake animation, but wait for apiDone before finishing
+    if (active >= STEPS.length) {
+      if (apiDone) {
+        const t = setTimeout(onDone, 900);
+        return () => clearTimeout(t);
       }
+      return; // wait here until apiDone becomes true
     }
-
-    processOnboarding();
-  }, [state, onDone]);
+    const t = setTimeout(() => setActive(a => a + 1), 1100);
+    return () => clearTimeout(t);
+  }, [active, apiDone, onDone]);
 
   return (
     <div className="gen-screen">

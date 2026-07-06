@@ -244,11 +244,49 @@ const filterExercises = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Get dynamic substitutes for an exercise
+ * @route   GET /api/exercises/:id/substitutes
+ * @access  Private
+ */
+const getExerciseSubstitutes = asyncHandler(async (req, res) => {
+  const mongoose = require('mongoose');
+  const { id } = req.params;
+
+  let exercise = await Exercise.findOne({ sourceId: id, isActive: true });
+  if (!exercise && mongoose.Types.ObjectId.isValid(id)) {
+    exercise = await Exercise.findById(id);
+    if (exercise && !exercise.isActive) exercise = null; 
+  }
+
+  if (!exercise) {
+    res.status(404);
+    throw new Error('Exercise not found');
+  }
+
+  const limitNum = 4;
+  
+  // Find up to 4 exercises with the exact same target muscle, excluding the original exercise
+  const substitutes = await Exercise.find({
+    targetMuscle: exercise.targetMuscle,
+    _id: { $ne: exercise._id },
+    isActive: true
+  })
+    .select('name gifUrl whyLabel equipment muscleGroup')
+    .limit(limitNum);
+
+  res.status(200).json({
+    success: true,
+    data: substitutes
+  });
+});
+
 module.exports = {
   getAllExercises,
   getExerciseById,
   getExercisesByMuscleGroup,
   getExercisesByEquipment,
   searchExercises,
-  filterExercises
+  filterExercises,
+  getExerciseSubstitutes
 };

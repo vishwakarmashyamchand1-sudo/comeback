@@ -84,12 +84,20 @@ const getTodayWorkout = asyncHandler(async (req, res) => {
     date: today
   }).populate('exercises.exerciseId', 'name equipment targetMuscle gifUrl whyLabel');
 
+  // Robust fallback: if user.weeklyPlanSplit is empty, extract it from the actual workouts for this week
+  let activeSplit = user.weeklyPlanSplit || [];
+  if (activeSplit.length === 0) {
+    const weekWorkouts = await Workout.find({ userId: user._id, weekNumber: user.currentWeekNumber || 1 }).sort({ date: 1 });
+    activeSplit = weekWorkouts.map(w => w.sessionType || 'Rest');
+  }
+
   if (workout) {
     // Step 31: Return the workout document with populated data
     return res.status(200).json({
       workout: workout,
       isRestDay: false,
-      previousSession: previousSession
+      previousSession: previousSession,
+      weeklyPlanSplit: activeSplit
     });
   }
 
@@ -109,13 +117,90 @@ const getTodayWorkout = asyncHandler(async (req, res) => {
     return res.status(200).json({
       workout: null,
       isRestDay: true,
-      previousSession: previousSession
+      previousSession: previousSession,
+      weeklyPlanSplit: activeSplit
     });
   }
 
-  // 404 Error: Frontend will show "Contact your coach" prompt
+// 404 Error: Frontend will show "Contact your coach" prompt
   res.status(404);
   throw new Error('No workout planned for today');
+});
+
+/**
+ * @desc    Fetch a workout by its date offset from today (0 = today, 1 = tomorrow, etc.)
+ * @route   GET /api/workouts/by-offset/:offset
+ * @access  Private
+ */
+const getWorkoutByOffset = asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
+
+  const offset = parseInt(req.params.offset) || 0;
+
+  const targetDate = new Date();
+  targetDate.setUTCHours(0, 0, 0, 0);
+  targetDate.setDate(targetDate.getDate() + offset);
+
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  // Fetch the last completed session for context display
+  const lastWorkout = await Workout.findOne({ 
+    userId: user._id, 
+    status: 'completed' 
+  }).sort({ date: -1 });
+
+  const previousSession = lastWorkout ? {
+    date: lastWorkout.date,
+    sessionType: lastWorkout.sessionType,
+    sessionDurationMins: lastWorkout.sessionDurationMins
+  } : null;
+
+  const workout = await Workout.findOne({
+    userId: user._id,
+    date: targetDate
+  }).populate('exercises.exerciseId', 'name equipment targetMuscle gifUrl whyLabel');
+
+  let activeSplit = user.weeklyPlanSplit || [];
+  if (activeSplit.length === 0) {
+    const weekWorkouts = await Workout.find({ userId: user._id, weekNumber: user.currentWeekNumber || 1 }).sort({ date: 1 });
+    activeSplit = weekWorkouts.map(w => w.sessionType || 'Rest');
+  }
+
+  if (workout) {
+    return res.status(200).json({
+      workout: workout,
+      isRestDay: false,
+      previousSession: previousSession,
+      weeklyPlanSplit: activeSplit
+    });
+  }
+
+  // Check if target date is a rest day based on the split
+  const targetIndex = targetDate.getDay(); 
+  let isRestDay = false;
+  if (user && user.weeklyPlanSplit && user.weeklyPlanSplit.length > 0) {
+    const splitForTarget = user.weeklyPlanSplit[targetIndex % user.weeklyPlanSplit.length];
+    if (splitForTarget && splitForTarget.toLowerCase() === 'rest') {
+      isRestDay = true;
+    }
+  }
+
+  if (isRestDay) {
+    return res.status(200).json({
+      workout: null,
+      isRestDay: true,
+      previousSession: previousSession,
+      weeklyPlanSplit: activeSplit
+    });
+  }
+
+  res.status(404);
+  throw new Error('No workout planned for this date');
 });
 
 /**
@@ -332,6 +417,10 @@ const logSet = asyncHandler(async (req, res) => {
   if (actualWeight !== undefined) targetSet.actualWeight = actualWeight;
   if (completed !== undefined) targetSet.completed = completed;
 
+  // Dynamically update the exercise's isCompleted status
+  const allSetsDone = workout.exercises[exerciseIndex].sets.every(s => s.completed);
+  workout.exercises[exerciseIndex].isCompleted = allSetsDone;
+
   // Step 35: If workout status is still "planned", update to "in_progress"
   if (workout.status === 'planned') {
     workout.status = 'in_progress';
@@ -470,6 +559,33 @@ const skipExercise = asyncHandler(async (req, res) => {
     success: true,
     updatedExercise: workout.exercises[exerciseIndex]
   });
+});
+
+/**
+ * @desc    Restore a skipped exercise
+ * @route   PATCH /api/workouts/:id/restore-exercise
+ * @access  Private
+ */
+const restoreExercise = asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
+
+  const { exerciseIndex } = req.body;
+  if (exerciseIndex === undefined) {
+    res.status(400);
+    throw new Error('exerciseIndex is required');
+  }
+
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+  const workout = await Workout.findOne({ _id: req.params.id, userId: user._id });
+
+  if (workout && workout.exercises[exerciseIndex]) {
+    workout.exercises[exerciseIndex].wasSkipped = false;
+    workout.exercises[exerciseIndex].skipReason = '';
+    await workout.save();
+  }
+
+  res.status(200).json({ success: true });
 });
 
 /**
@@ -617,10 +733,7 @@ const completeWorkout = asyncHandler(async (req, res) => {
     throw new Error('Workout not found');
   }
 
-  if (workout.status === 'completed') {
-    res.status(400);
-    throw new Error('Workout is already completed');
-  }
+  const wasAlreadyCompleted = workout.status === 'completed';
 
   // 3. Step 46: Update the Workout document immediately
   workout.status = 'completed';
@@ -635,82 +748,85 @@ const completeWorkout = asyncHandler(async (req, res) => {
 
   // 4. Step 47: Detect Personal Records
   const newPRs = [];
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  if (!wasAlreadyCompleted) {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  // Fetch all completed workouts from the last 30 days
-  const pastWorkouts = await Workout.find({
-    userId: user._id,
-    status: 'completed',
-    date: { $gte: thirtyDaysAgo, $lt: workout.date }
-  });
-
-  // Loop through today's exercises
-  workout.exercises.forEach(exercise => {
-    let maxTodayVolume = 0;
-    
-    // Calculate best set from today
-    exercise.sets.forEach(set => {
-      if (set.completed && set.actualWeight && set.actualReps) {
-        const volume = set.actualWeight * set.actualReps;
-        if (volume > maxTodayVolume) maxTodayVolume = volume;
-      }
+    // Fetch all completed workouts from the last 30 days
+    const pastWorkouts = await Workout.find({
+      userId: user._id,
+      status: 'completed',
+      date: { $gte: thirtyDaysAgo, $lt: workout.date }
     });
 
-    if (maxTodayVolume > 0) {
-      let maxPastVolume = 0;
-      let pastBestString = "0kg x 0 reps";
-
-      // Look through past workouts for this exact exercise
-      pastWorkouts.forEach(pastWk => {
-        const pastEx = pastWk.exercises.find(e => e.exerciseName === exercise.exerciseName);
-        if (pastEx) {
-          pastEx.sets.forEach(pastSet => {
-            if (pastSet.completed && pastSet.actualWeight && pastSet.actualReps) {
-              const pVolume = pastSet.actualWeight * pastSet.actualReps;
-              if (pVolume > maxPastVolume) {
-                maxPastVolume = pVolume;
-                pastBestString = `${pastSet.actualWeight}kg x ${pastSet.actualReps} reps`;
-              }
-            }
-          });
+    // Loop through today's exercises
+    workout.exercises.forEach(exercise => {
+      let maxTodayVolume = 0;
+      
+      // Calculate best set from today
+      exercise.sets.forEach(set => {
+        if (set.completed && set.actualWeight && set.actualReps) {
+          const volume = set.actualWeight * set.actualReps;
+          if (volume > maxTodayVolume) maxTodayVolume = volume;
         }
       });
 
-      // If today's volume beats the past 30 days maximum, it's a new PR!
-      if (maxTodayVolume > maxPastVolume) {
-        // Find exactly which set triggered the PR for the string
-        const bestSet = exercise.sets.find(s => s.completed && (s.actualWeight * s.actualReps) === maxTodayVolume);
-        
-        newPRs.push({
-          exerciseName: exercise.exerciseName,
-          previousBest: maxPastVolume === 0 ? "First time logging!" : pastBestString,
-          newBest: `${bestSet.actualWeight}kg x ${bestSet.actualReps} reps`,
-          achievedAt: new Date()
+      if (maxTodayVolume > 0) {
+        let maxPastVolume = 0;
+        let pastBestString = "0kg x 0 reps";
+
+        // Look through past workouts for this exact exercise
+        pastWorkouts.forEach(pastWk => {
+          const pastEx = pastWk.exercises.find(e => e.exerciseName === exercise.exerciseName);
+          if (pastEx) {
+            pastEx.sets.forEach(pastSet => {
+              if (pastSet.completed && pastSet.actualWeight && pastSet.actualReps) {
+                const pVolume = pastSet.actualWeight * pastSet.actualReps;
+                if (pVolume > maxPastVolume) {
+                  maxPastVolume = pVolume;
+                  pastBestString = `${pastSet.actualWeight}kg x ${pastSet.actualReps} reps`;
+                }
+              }
+            });
+          }
         });
+
+        // If today's volume beats the past 30 days maximum, it's a new PR!
+        if (maxTodayVolume > maxPastVolume) {
+          // Find exactly which set triggered the PR for the string
+          const bestSet = exercise.sets.find(s => s.completed && (s.actualWeight * s.actualReps) === maxTodayVolume);
+          
+          newPRs.push({
+            exerciseName: exercise.exerciseName,
+            previousBest: maxPastVolume === 0 ? "First time logging!" : pastBestString,
+            newBest: `${bestSet.actualWeight}kg x ${bestSet.actualReps} reps`,
+            achievedAt: new Date()
+          });
+        }
+      }
+    });
+
+    // 5. Step 52: Update Metric document for this week
+    let metric = await Metric.findOne({ userId: user._id, weekNumber: user.currentWeekNumber });
+    
+    if (!metric) {
+      // If no metric document exists for this week yet, create one
+      metric = new Metric({
+        userId: user._id,
+        weekNumber: user.currentWeekNumber || 1,
+        sessionsCompleted: 1,
+        newPRs: newPRs
+      });
+    } else {
+      // If it exists, increment and append
+      metric.sessionsCompleted += 1;
+      if (newPRs.length > 0) {
+        metric.newPRs.push(...newPRs);
       }
     }
-  });
-
-  // 5. Step 52: Update Metric document for this week
-  let metric = await Metric.findOne({ userId: user._id, weekNumber: user.currentWeekNumber });
-  
-  if (!metric) {
-    // If no metric document exists for this week yet, create one
-    metric = new Metric({
-      userId: user._id,
-      weekNumber: user.currentWeekNumber || 1,
-      sessionsCompleted: 1,
-      newPRs: newPRs
-    });
-  } else {
-    // If it exists, increment and append
-    metric.sessionsCompleted += 1;
-    if (newPRs.length > 0) {
-      metric.newPRs.push(...newPRs);
-    }
+    await metric.save();
   }
-  await metric.save();
 
   // 6. Steps 48, 49, 50, 51: Call Antigravity API
   try {
@@ -727,50 +843,243 @@ const completeWorkout = asyncHandler(async (req, res) => {
     tomorrowDate.setDate(tomorrowDate.getDate() + 1);
     tomorrowDate.setUTCHours(0, 0, 0, 0);
 
-    // Overwrite existing plan if it exists
-    await Workout.deleteMany({ userId: user._id, date: tomorrowDate });
+    // Resolve exercise IDs for the AI generated exercises
+    const finalExercises = [];
+    if (aiResponse.tomorrow.exercises) {
+      for (const ex of aiResponse.tomorrow.exercises) {
+        let dbEx = await Exercise.findOne({ name: new RegExp(`^${ex.exerciseName}$`, 'i') });
+        if (!dbEx) {
+          const words = (ex.exerciseName || '').split(' ').filter(w => w.length > 2);
+          if (words.length > 0) {
+            const regexQuery = words.map(w => ({ name: new RegExp(w, 'i') }));
+            dbEx = await Exercise.findOne({ $and: regexQuery });
+          }
+          if (!dbEx && words.length > 0) {
+            dbEx = await Exercise.findOne({ name: new RegExp(words[words.length - 1], 'i') });
+          }
+        }
+        if (dbEx) {
+          finalExercises.push({
+            ...ex,
+            exerciseName: dbEx.name,
+            exerciseId: dbEx._id
+          });
+        }
+      }
+    }
 
-    const tomorrowPlan = await Workout.create({
-      userId: user._id,
+    // Instead of saving directly, we send this as a preview.
+    // The user must click "Looks good" to confirm and save this.
+    const tomorrowPlanPreview = {
       date: tomorrowDate,
-      weekNumber: workout.weekNumber, // Keep same week
+      weekNumber: workout.weekNumber,
       dayOfWeek: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][tomorrowDate.getDay()],
       sessionType: aiResponse.tomorrow.sessionType,
       status: aiResponse.tomorrow.isRestDay ? 'rest_day' : 'planned',
-      exercises: aiResponse.tomorrow.exercises || [],
+      exercises: finalExercises,
       planSource: 'ai_generated'
-    });
+    };
 
     res.status(200).json({
+      success: true,
+      message: "Workout completed and next plan generated as preview",
       workout: workout,
       aiSummary: aiResponse.summary,
-      tomorrowPlan: tomorrowPlan,
+      tomorrowPlan: tomorrowPlanPreview,
       newPRs: newPRs
     });
 
   } catch (error) {
     console.error("Failed to generate tomorrow plan:", error);
+    
+    // Fetch the existing tomorrow plan if we have one
+    const tomorrowDate = new Date();
+    tomorrowDate.setUTCHours(0, 0, 0, 0);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const existingTomorrowPlan = await Workout.findOne({ userId: user._id, date: tomorrowDate });
+
     res.status(500).json({
       success: false,
       message: "Summary unavailable",
       workout: workout,
       aiSummary: null,
-      tomorrowPlan: null,
+      tomorrowPlan: existingTomorrowPlan || null,
       newPRs: newPRs
     });
   }
 });
 
+/**
+ * @desc    Substitute an exercise in a workout
+ * @route   PATCH /api/workouts/:id/substitute-exercise
+ * @access  Private
+ */
+const substituteExercise = asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+  
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const workout = await Workout.findOne({ _id: req.params.id, userId: user._id });
+  if (!workout) {
+    res.status(404);
+    throw new Error('Workout not found');
+  }
+
+  const { exerciseIndex, newExerciseId } = req.body;
+
+  // Validate exerciseIndex
+  if (exerciseIndex === undefined || exerciseIndex < 0 || exerciseIndex >= workout.exercises.length) {
+    res.status(404);
+    throw new Error('Exercise not found in workout');
+  }
+
+  // Fetch the new exercise details
+  const newExercise = await Exercise.findById(newExerciseId);
+  if (!newExercise) {
+    res.status(404);
+    throw new Error('Substitute exercise not found in library');
+  }
+
+  // Update the workout's exercise entry
+  const oldName = workout.exercises[exerciseIndex].exerciseName;
+  workout.exercises[exerciseIndex].exerciseId = newExercise._id;
+  workout.exercises[exerciseIndex].exerciseName = newExercise.name;
+  workout.exercises[exerciseIndex].muscleGroup = newExercise.muscleGroup;
+  workout.exercises[exerciseIndex].wasSubstituted = true;
+  workout.exercises[exerciseIndex].substitutedFrom = oldName;
+  
+  // We keep the original planned sets/reps but reset completion status
+  workout.exercises[exerciseIndex].sets.forEach(set => {
+    set.completed = false;
+    set.actualReps = 0;
+    set.actualWeight = 0;
+  });
+
+  await workout.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Exercise substituted successfully',
+    workout
+  });
+});
+
+/**
+ * @desc    Confirm the AI generated tomorrow plan and overwrite the database
+ * @route   POST /api/workouts/tomorrow/confirm-ai
+ * @access  Private
+ */
+const confirmAiPlan = asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
+
+  const { tomorrowPlan } = req.body;
+
+  if (!tomorrowPlan || !tomorrowPlan.date) {
+    res.status(400);
+    throw new Error('Please provide the valid tomorrowPlan object');
+  }
+
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  // The preview plan passed back from the client has the correct date
+  const targetDate = new Date(tomorrowPlan.date);
+
+  // Overwrite existing plan if it exists
+  await Workout.deleteMany({ userId: user._id, date: targetDate });
+
+  const newTomorrowPlan = await Workout.create({
+    userId: user._id,
+    date: targetDate,
+    weekNumber: tomorrowPlan.weekNumber,
+    dayOfWeek: tomorrowPlan.dayOfWeek,
+    sessionType: tomorrowPlan.sessionType,
+    status: tomorrowPlan.status,
+    exercises: tomorrowPlan.exercises,
+    planSource: tomorrowPlan.planSource
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Tomorrow's plan confirmed and saved",
+    tomorrowPlan: newTomorrowPlan
+  });
+});
+/**
+ * @desc    Get summary for an already completed workout
+ * @route   GET /api/workouts/:id/summary
+ * @access  Private
+ */
+const getWorkoutSummary = asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
+  const Metric = require('../models/Metrics');
+
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const workout = await Workout.findOne({ _id: req.params.id, userId: user._id });
+  if (!workout) {
+    res.status(404);
+    throw new Error('Workout not found');
+  }
+
+  if (workout.status !== 'completed') {
+    res.status(400);
+    throw new Error('Workout is not completed yet');
+  }
+
+  // Get tomorrow's plan
+  const tomorrowDate = new Date(workout.date);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  tomorrowDate.setUTCHours(0, 0, 0, 0);
+  
+  const nextDayMidnight = new Date(tomorrowDate);
+  nextDayMidnight.setDate(nextDayMidnight.getDate() + 1);
+
+  const tomorrowPlan = await Workout.findOne({
+    userId: user._id,
+    date: { $gte: tomorrowDate, $lt: nextDayMidnight }
+  });
+
+  // Get metrics for PRs
+  let metric = await Metric.findOne({ userId: user._id, weekNumber: user.currentWeekNumber });
+  const newPRs = metric ? metric.newPRs : [];
+
+  res.status(200).json({
+    aiSummary: workout.aiSummary || "Great job completing your workout!",
+    tomorrowPlan: tomorrowPlan,
+    newPRs: newPRs,
+    workout: workout
+  });
+});
+
 module.exports = {
   createWorkout,
   getTodayWorkout,
+  getWorkoutByOffset,
   getWorkoutHistory,
   getWorkoutProgress,
   getWorkoutById,
   logSet,
   addExercise,
   skipExercise,
+  restoreExercise,
   swapMuscle,
   confirmPlan,
-  completeWorkout
+  completeWorkout,
+  substituteExercise,
+  confirmAiPlan,
+  getWorkoutSummary
 };

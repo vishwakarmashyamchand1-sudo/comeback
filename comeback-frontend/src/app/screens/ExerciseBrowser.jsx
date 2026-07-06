@@ -4,9 +4,9 @@ import { muscleFilters } from '../data.js'; // Keep the filter chips array
 import { API_URL } from '../../lib/api.js';
 import { useOnboarding } from '../../lib/store.jsx';
 
-export function ExerciseBrowser({ onClose, onAdd }) {
+export function ExerciseBrowser({ onClose, onAdd, initialFilter = 'All' }) {
   const { state } = useOnboarding();
-  const [filter, setFilter] = useState('All');
+  const [filter, setFilter] = useState(initialFilter);
   const [searchQuery, setSearchQuery] = useState('');
   const [detail, setDetail] = useState(null);
   const [detailHistory, setDetailHistory] = useState(null);

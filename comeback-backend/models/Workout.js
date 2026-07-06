@@ -20,6 +20,8 @@ const WorkoutExerciseSchema = new mongoose.Schema({
   isCompleted:  { type: Boolean, default: false }, // true when user finishes all sets
   wasSkipped:   { type: Boolean, default: false },
   skipReason:   { type: String },
+  wasSubstituted: { type: Boolean, default: false },
+  substitutedFrom: { type: String },
   addedByUser:  { type: Boolean, default: false }, // true = user added, not AI planned
   claudeReasoning:{ type: String }, // AI explanation for why this exercise was added
   benefits:       { type: String }, // AI explanation of the benefits

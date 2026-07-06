@@ -123,18 +123,20 @@ const completeOnboarding = asyncHandler(async (req, res) => {
   }
 
   // 3. Save Baseline data (Optional)
-  const { baselineLifts } = req.body;
+  const { baselineLifts, strongestMuscle, weakestMuscle } = req.body;
   if (baselineLifts) {
     user.baselineLifts = baselineLifts;
   }
+  if (strongestMuscle) user.strongestMuscle = strongestMuscle;
+  if (weakestMuscle) user.weakestMuscle = weakestMuscle;
 
   // 4. Calculate Calories & Protein (Steps 17 & 18 from the Sir's doc)
   let bmr = 0;
   const age = 30; // Defaulting to 30 for math
   if (user.gender === 'female') {
-    bmr = 447.593 + (9.247 * user.currentWeightKg) + (3.098 * user.heightCm) - (4.330 * age);
+    bmr = 447.6 + (9.2 * user.currentWeightKg) + (3.1 * user.heightCm) - (4.3 * age); // Using 1 decimal place standard
   } else {
-    bmr = 88.362 + (13.397 * user.currentWeightKg) + (4.799 * user.heightCm) - (5.677 * age);
+    bmr = 88.36 + (13.4 * user.currentWeightKg) + (4.8 * user.heightCm) - (5.7 * age); // Exact match from Sir's doc
   }
   
   const activityMultiplier = user.daysPerWeek >= 5 ? 1.55 : 1.375; 
@@ -153,14 +155,10 @@ const completeOnboarding = asyncHandler(async (req, res) => {
   user.currentWeekNumber = 1;
   user.isDiscoveryWeek = !isReturning; // If not returning, it is a discovery week!
 
-  if (!user.weeklyPlanSplit || user.weeklyPlanSplit.length === 0) {
-    user.weeklyPlanSplit = ['full', 'rest', 'full', 'rest', 'full', 'rest', 'rest'];
-  }
-
   await user.save();
 
   // 6. Generate 7-Day Workout Plan (Steps 20, 21, 22 from the Sir's doc)
-  await Workout.deleteMany({ userId: user._id, weekNumber: 1 }); // Clear any old tests
+  await Workout.deleteMany({ userId: user._id }); // Clear all old workouts to prevent duplicate key errors when regenerating
 
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   let weekPlan = [];
@@ -169,13 +167,47 @@ const completeOnboarding = asyncHandler(async (req, res) => {
   try {
     const generatedWeek = await generateWeek1Plan(user, baselineLifts);
     
+    // Save the AI's chosen split back to the user profile
+    if (generatedWeek && generatedWeek.length === 7) {
+      user.weeklyPlanSplit = generatedWeek.map(day => day.sessionType || 'Rest');
+      await user.save();
+    }
+
     for (let i = 0; i < 7; i++) {
       const d = new Date();
       d.setUTCHours(0, 0, 0, 0);
       d.setDate(d.getDate() + i);
       
+      const Exercise = require('../models/Exercise');
+      let finalExercises = [];
       const dayData = generatedWeek[i];
       const isRestDay = dayData ? dayData.isRestDay : (i % 2 !== 0);
+      
+      if (dayData && dayData.exercises) {
+        for (const ex of dayData.exercises) {
+          if (!ex.exerciseName) continue;
+          let dbEx = await Exercise.findOne({ name: new RegExp('^' + ex.exerciseName + '$', 'i') });
+          if (!dbEx) {
+            // Smart fuzzy fallback: find an exercise that contains the key words
+            const words = ex.exerciseName.split(' ').filter(w => w.length > 2); // e.g. ["Cable", "Triceps", "Pushdown"]
+            if (words.length > 0) {
+              const regexQuery = words.map(w => ({ name: new RegExp(w, 'i') }));
+              dbEx = await Exercise.findOne({ $and: regexQuery });
+            }
+            if (!dbEx && words.length > 0) {
+              // Ultimate fallback: match the last significant word (e.g., "Press", "Curl", "Pushdown")
+              dbEx = await Exercise.findOne({ name: new RegExp(words[words.length - 1], 'i') });
+            }
+          }
+          if (dbEx) {
+            finalExercises.push({
+              ...ex,
+              exerciseName: dbEx.name, // normalize to DB name
+              exerciseId: dbEx._id
+            });
+          }
+        }
+      }
       
       const workoutDoc = await Workout.create({
         userId: user._id,
@@ -184,7 +216,7 @@ const completeOnboarding = asyncHandler(async (req, res) => {
         dayOfWeek: days[d.getDay()],
         sessionType: dayData ? dayData.sessionType : (isRestDay ? 'Rest' : 'Full Body'),
         status: isRestDay ? 'rest_day' : 'planned',
-        exercises: dayData ? dayData.exercises : [],
+        exercises: finalExercises,
         planSource: 'ai_generated'
       });
       weekPlan.push(workoutDoc);
