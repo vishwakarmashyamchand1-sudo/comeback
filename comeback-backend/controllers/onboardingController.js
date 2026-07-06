@@ -189,7 +189,8 @@ const completeOnboarding = asyncHandler(async (req, res) => {
           let dbEx = await Exercise.findOne({ name: new RegExp('^' + ex.exerciseName + '$', 'i') });
           if (!dbEx) {
             // Smart fuzzy fallback: find an exercise that contains the key words
-            const words = ex.exerciseName.split(' ').filter(w => w.length > 2); // e.g. ["Cable", "Triceps", "Pushdown"]
+            const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const words = ex.exerciseName.split(' ').filter(w => w.length > 2).map(escapeRegExp); // e.g. ["Cable", "Triceps", "Pushdown"]
             if (words.length > 0) {
               const regexQuery = words.map(w => ({ name: new RegExp(w, 'i') }));
               dbEx = await Exercise.findOne({ $and: regexQuery });
