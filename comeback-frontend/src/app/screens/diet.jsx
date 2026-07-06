@@ -9,9 +9,6 @@ export function Diet({ onLogMeal }) {
   const [dietData, setDietData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const cameraInputRef = useRef(null);
-  const galleryInputRef = useRef(null);
-
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -49,6 +46,7 @@ export function Diet({ onLogMeal }) {
       };
       reader.readAsDataURL(file);
     }
+    e.target.value = ''; // Reset input so same file can be selected again
   };
 
   useEffect(() => {
@@ -201,24 +199,15 @@ export function Diet({ onLogMeal }) {
             <div style={{ textAlign: 'center', color: '#8A8A85', fontSize: 13, padding: '16px 0' }}>No meals logged yet</div>
           )}
           
-          <input 
-            type="file" 
-            accept="image/*" 
-            capture="environment"
-            ref={cameraInputRef} 
-            style={{ display: 'none' }} 
-            onChange={handleFileChange} 
-          />
-          <input 
-            type="file" 
-            accept="image/*" 
-            ref={galleryInputRef} 
-            style={{ display: 'none' }} 
-            onChange={handleFileChange} 
-          />
-          <div onClick={() => galleryInputRef.current && galleryInputRef.current.click()} style={{ background: '#fff', border: '1.5px dashed #DDDDD9', borderRadius: 14, padding: 14, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', color: '#8A8A85', cursor: 'pointer' }}>
+          <label style={{ background: '#fff', border: '1.5px dashed #DDDDD9', borderRadius: 14, padding: 14, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', color: '#8A8A85', cursor: 'pointer' }}>
+            <input 
+              type="file" 
+              accept="image/*" 
+              style={{ display: 'none' }} 
+              onChange={handleFileChange} 
+            />
             <i className="ti ti-plus" style={{ fontSize: 16 }} /><span style={{ fontSize: 13, fontWeight: 500 }}>Log meal</span>
-          </div>
+          </label>
         </div>
 
         <div style={{ marginBottom: 4 }}>
@@ -226,10 +215,17 @@ export function Diet({ onLogMeal }) {
         </div>
       </div>
 
-      <div className="fab" onClick={() => cameraInputRef.current && cameraInputRef.current.click()}>
+      <label className="fab" style={{ cursor: 'pointer', margin: 0 }}>
+        <input 
+          type="file" 
+          accept="image/*" 
+          capture="environment"
+          style={{ display: 'none' }} 
+          onChange={handleFileChange} 
+        />
         <div className="fab-btn"><i className="ti ti-camera" /></div>
         <span className="fab-lbl">Log meal</span>
-      </div>
+      </label>
     </div>
   );
 }
