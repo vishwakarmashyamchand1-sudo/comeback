@@ -7,24 +7,43 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'mock_key');
  */
 
 // 1. Generate Week 1 Plan (Called during Onboarding)
-const generateWeek1Plan = async (user, baselineData) => {
+const generateWeek1Plan = async (user, baselineData, isRetry = false) => {
   try {
     console.log('[Antigravity] Generating 7-day Week 1 plan...');
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    
+    // Call 01 Prompt (Returning User with Baseline) vs Call 02 Prompt (Beginner)
+    const isReturning = baselineData && Object.keys(baselineData).length > 0;
     
     let prompt = `You are Comeback, an elite personal trainer.
 Create a 7-day workout plan for a new user starting their journey.
 You MUST return ONLY a valid JSON array of 7 objects (one for each day, starting with Day 1). Do not include markdown code blocks.
 
 User Profile:
-- Goal: ${user.primaryGoal}
-- Experience: ${user.fitnessLevel}
-- Weight: ${user.currentWeightKg}kg
-- Target Weight: ${user.targetWeightKg}kg
-- Split: ${user.weeklyPlanSplit ? user.weeklyPlanSplit.join(', ') : 'Not specified'}
-- Injuries: ${(user.injuries || []).join(', ')}
-- Baseline Data: ${baselineData ? JSON.stringify(baselineData) : 'None provided'}
+- Goal: ${user.primaryGoal} (Urgency: ${user.urgencyLevel || 'Normal'}, Event: ${user.upcomingEvent || 'None'})
+- Experience: ${user.fitnessLevel} (Last Active: ${user.lastActive || 'Not specified'})
+- Gender: ${user.gender || 'Not specified'}
+- Height: ${user.heightCm ? user.heightCm + 'cm' : 'Not specified'}
+- Weight: ${user.currentWeightKg}kg (Target: ${user.targetWeightKg}kg by ${user.targetDate ? new Date(user.targetDate).toLocaleDateString() : 'Not specified'})
+- Equipment Access: ${user.equipmentAccess || 'Full Gym'}
+- Days Per Week: ${user.daysPerWeek || 'Not specified'}
+- Preferred Workout Time: ${user.preferredTime || 'Not specified'}
+- Split: Please determine the optimal 7-day split based on their Experience and Days Per Week.
+- Injuries/Medical: ${(user.injuries || []).join(', ')} | ${(user.medicalConditions || []).join(', ')}
+- Exercises to Avoid: ${user.exercisesToAvoid || 'None'}
+- Strongest Muscle: ${user.strongestMuscle || 'Not specified'}
+- Weakest Muscle: ${user.weakestMuscle || 'Not specified'}
+`;
 
+    if (isReturning) {
+      prompt += `- Baseline Data: ${JSON.stringify(baselineData)}\n`;
+      prompt += `Important: Since they are a returning user, use their baseline lifts to estimate challenging starting weights for their core lifts.\n`;
+    } else {
+      prompt += `- Baseline Data: None provided (Beginner)\n`;
+      prompt += `Important: Since they are a beginner, suggest lighter weights (e.g. 5-10kg), machines, or bodyweight exercises to safely build their foundation. Keep the volume manageable.\n`;
+    }
+
+    prompt += `
 Each of the 7 daily objects must match this schema:
 - 'dayName' (string: e.g., "Day 1")
 - 'sessionType' (string: e.g., "Push Day", "Rest")
@@ -32,7 +51,7 @@ Each of the 7 daily objects must match this schema:
 - 'exercises' (array of objects, empty if rest day)
   - 'exerciseName' (string)
   - 'muscleGroup' (string)
-  - 'sets' (array of objects: 'setNumber' (number), 'plannedReps' (number), 'plannedWeight' (number))
+  - 'sets' (array of objects: 'setNumber' (number), 'plannedReps' (number), 'plannedWeight' (number)). CRITICAL: Do NOT make every set identical! You must simulate progressive overload or warm-ups (e.g., Set 1: 15 reps @ 10kg, Set 2: 12 reps @ 15kg, Set 3: 10 reps @ 20kg).
   - 'antigravityReasoning' (string)
   - 'benefits' (string)`;
 
@@ -40,10 +59,19 @@ Each of the 7 daily objects must match this schema:
     const responseText = result.response.text().trim();
     
     const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-    const parsedPlan = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(responseText);
     
-    console.log('[Antigravity] Successfully generated Week 1 plan.');
-    return parsedPlan;
+    try {
+      const parsedPlan = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(responseText);
+      console.log('[Antigravity] Successfully generated Week 1 plan.');
+      return parsedPlan;
+    } catch (parseError) {
+      if (!isRetry) {
+        console.warn("[Antigravity Warning] JSON parsing failed. Retrying once...");
+        return await generateWeek1Plan(user, baselineData, true);
+      }
+      throw new Error("JSON parsing failed twice.");
+    }
+    
   } catch (error) {
     console.error("[Antigravity Error]:", error);
     throw new Error("Failed to generate week plan");

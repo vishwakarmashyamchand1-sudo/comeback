@@ -103,7 +103,7 @@ export const profile = {
 
 // Day-type options for the "Change today's focus" sheet
 export const dayTypes = [
-  { id: 'push',   name: 'Push day',        muscles: 'Chest · Shoulders · Triceps', icon: 'ti-barbell',            coachPick: true },
+  { id: 'push',   name: 'Push day',        muscles: 'Chest · Shoulders · Triceps', icon: 'ti-barbell' },
   { id: 'pull',   name: 'Pull day',        muscles: 'Back · Biceps',               icon: 'ti-stretching' },
   { id: 'legs',   name: 'Leg day',         muscles: 'Quads · Hamstrings · Glutes', icon: 'ti-run' },
   { id: 'cardio', name: 'Cardio day',      muscles: 'Conditioning · low impact',   icon: 'ti-heart-rate-monitor' },

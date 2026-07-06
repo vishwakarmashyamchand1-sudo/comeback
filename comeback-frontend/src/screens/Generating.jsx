@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useOnboarding } from '../lib/store.jsx';
 
 const STEPS = [
@@ -12,16 +12,45 @@ const STEPS = [
 export default function Generating({ onDone }) {
   const { state } = useOnboarding();
   const [active, setActive] = useState(0);
+  const [apiDone, setApiDone] = useState(false);
+  const fetched = useRef(false);
   const name = state.profile.name || 'there';
 
   useEffect(() => {
+    if (fetched.current) return;
+    fetched.current = true;
+    
+    // 1. Fire off the backend AI generation
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/onboarding/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: JSON.stringify({})
+    }).then(res => res.json())
+      .then(data => {
+        console.log("AI Generation complete:", data);
+        setApiDone(true);
+      })
+      .catch(err => {
+        console.error("AI Generation failed:", err);
+        setApiDone(true); // proceed anyway on failure to show fallback
+      });
+  }, [state.token]);
+
+  useEffect(() => {
+    // 2. Control the fake animation, but wait for apiDone before finishing
     if (active >= STEPS.length) {
-      const t = setTimeout(onDone, 900);
-      return () => clearTimeout(t);
+      if (apiDone) {
+        const t = setTimeout(onDone, 900);
+        return () => clearTimeout(t);
+      }
+      return; // wait here until apiDone becomes true
     }
     const t = setTimeout(() => setActive(a => a + 1), 1100);
     return () => clearTimeout(t);
-  }, [active, onDone]);
+  }, [active, apiDone, onDone]);
 
   return (
     <div className="gen-screen">
