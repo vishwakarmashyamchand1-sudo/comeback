@@ -215,6 +215,11 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
         });
         const data = await res.json();
         
+        if (!res.ok) {
+          alert(`AI Error: ${data.message || 'Analysis failed'}`);
+          return;
+        }
+
         if (data && data.items) {
           setDetectedMeal({
             items: data.items.map(it => ({
@@ -231,6 +236,7 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
         }
       } catch (e) {
         console.error("AI Analysis failed:", e);
+        alert("Failed to connect to AI for analysis.");
       } finally {
         setPhase('results');
       }
@@ -300,7 +306,7 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
   }
 
   return (
-    <div className="app-body">
+    <div className="app-body" style={{ background: '#F5F5F3' }}>
       <PushHeader title="Detected meal" onBack={onBack} />
       <div className="screen-pad scroll" style={{ paddingTop: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>

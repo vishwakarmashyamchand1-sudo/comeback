@@ -490,12 +490,10 @@ const analyzePhoto = asyncHandler(async (req, res) => {
   // Process the base64 string
   let base64Data = photo;
   let mimeType = 'image/jpeg';
-  if (photo.startsWith('data:')) {
-    const matches = photo.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (matches && matches.length === 3) {
-      mimeType = matches[1];
-      base64Data = matches[2];
-    }
+  if (photo && photo.includes('base64,')) {
+    const parts = photo.split('base64,');
+    mimeType = parts[0].replace('data:', '').replace(';', '');
+    base64Data = parts[1];
   }
 
   try {
