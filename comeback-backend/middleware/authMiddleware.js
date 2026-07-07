@@ -44,7 +44,7 @@ const protect = asyncHandler(async (req, res, next) => {
     } catch (error) {
       console.error('❌ Firebase Auth Error:', error.message);
       res.status(401);
-      throw new Error('Not authorized, token failed');
+      throw new Error(`Not authorized, token failed: ${error.message}`);
     }
   }
 

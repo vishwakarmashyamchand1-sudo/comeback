@@ -15,7 +15,7 @@ const FoodItemSchema = new mongoose.Schema({
 
 // Sub-schema for a meal slot
 const MealSchema = new mongoose.Schema({
-  mealType:   { type: String, enum: ['breakfast','lunch','snack','dinner'], required: true },
+  mealType:   { type: String, required: true },
   loggedAt:   { type: Date, default: Date.now },
   foodPhotoUrl: { type: String }, // Cloudflare R2 or S3 public URL
   rawAntigravityAnalysis: { type: String }, // Raw JSON text from Antigravity Vision API

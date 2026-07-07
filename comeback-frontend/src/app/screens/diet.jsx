@@ -275,7 +275,9 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
         const data = await res.json();
         
         if (!res.ok) {
-          alert(`AI Error: ${data.message || 'Analysis failed'}`);
+          alert(`AI Error: ${data.message || 'Analysis failed'}. You can log manually.`);
+          setDetectedMeal({ items: [{ name: '', qty: '', kcal: 0, protein: 0, carbs: 0, fat: 0, conf: 'high' }], tip: '' });
+          setIsEditing(true);
           return;
         }
 
@@ -295,7 +297,9 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
         }
       } catch (e) {
         console.error("AI Analysis failed:", e);
-        alert("Failed to connect to AI for analysis.");
+        alert("Failed to connect to AI for analysis. You can log manually.");
+        setDetectedMeal({ items: [{ name: '', qty: '', kcal: 0, protein: 0, carbs: 0, fat: 0, conf: 'high' }], tip: '' });
+        setIsEditing(true);
       } finally {
         setPhase('results');
       }
@@ -314,8 +318,8 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
       const itemsPayload = detectedMeal.items.map(it => ({
         name: it.name,
         quantityG: parseInt(it.qty) || 0,
-        calories: it.kcal,
-        proteinG: it.protein,
+        calories: Number(it.kcal) || 0,
+        proteinG: Number(it.protein) || 0,
         carbsG: it.carbs || 0,
         fatG: it.fat || 0
       }));
@@ -355,8 +359,8 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
   };
 
   const confIcon = { high: <i className="ti ti-circle-check-filled" style={{ fontSize: 15, color: '#3A7A0A' }} />, medium: <span style={{ fontSize: 13, color: '#D97706', fontWeight: 600 }}>~</span>, low: <span style={{ fontSize: 13, color: '#8A8A85', fontWeight: 600 }}>?</span> };
-  const totalK = detectedMeal.items.reduce((s, i) => s + i.kcal, 0);
-  const totalP = detectedMeal.items.reduce((s, i) => s + i.protein, 0);
+  const totalK = detectedMeal.items.reduce((s, i) => s + (Number(i.kcal) || 0), 0);
+  const totalP = detectedMeal.items.reduce((s, i) => s + (Number(i.protein) || 0), 0);
 
   const bgStyle = photo ? { backgroundImage: `url(${photo})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: 'linear-gradient(135deg,#4A4A3A,#2A2A24)' };
 
@@ -427,8 +431,8 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
                     <input type="text" value={it.qty} onChange={(e) => handleItemChange(idx, 'qty', e.target.value)} style={{ width: 70, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none' }} placeholder="Qty" />
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input type="number" value={it.kcal} onChange={(e) => handleItemChange(idx, 'kcal', parseInt(e.target.value) || 0)} style={{ width: 70, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none' }} /> <span style={{ fontSize: 12, color: '#8A8A85' }}>kcal</span>
-                    <input type="number" value={it.protein} onChange={(e) => handleItemChange(idx, 'protein', parseInt(e.target.value) || 0)} style={{ width: 70, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none', marginLeft: 8 }} /> <span style={{ fontSize: 12, color: '#8A8A85' }}>g protein</span>
+                    <input type="number" value={it.kcal} onChange={(e) => handleItemChange(idx, 'kcal', e.target.value === '' ? '' : Number(e.target.value))} style={{ width: 70, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none' }} /> <span style={{ fontSize: 12, color: '#8A8A85' }}>kcal</span>
+                    <input type="number" value={it.protein} onChange={(e) => handleItemChange(idx, 'protein', e.target.value === '' ? '' : Number(e.target.value))} style={{ width: 70, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none', marginLeft: 8 }} /> <span style={{ fontSize: 12, color: '#8A8A85' }}>g protein</span>
                   </div>
                 </div>
               ) : (
@@ -442,6 +446,13 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
               )}
             </div>
           ))}
+          {isEditing && (
+            <div 
+              onClick={() => setDetectedMeal(prev => ({...prev, items: [...prev.items, { name: '', qty: '', kcal: 0, protein: 0, carbs: 0, fat: 0, conf: 'high' }]}))}
+              style={{ background: '#fff', border: '1.5px dashed #DDDDD9', borderRadius: 14, padding: 12, textAlign: 'center', color: '#8A8A85', fontSize: 13, cursor: 'pointer' }}>
+              <i className="ti ti-plus" style={{ marginRight: 4 }} /> Add item
+            </div>
+          )}
         </div>
         <div style={{ background: '#E8E8F5', borderRadius: 14, padding: '13px 15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#1A1A2E' }}>Total</span>

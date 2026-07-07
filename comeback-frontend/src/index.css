@@ -169,11 +169,11 @@ input[type="date"] {
 .input-row.col2 { grid-template-columns: 1fr 1fr; }
 .input-row.col3 { grid-template-columns: 2fr 2fr 3fr; }
 
-.input-suffix { display: flex; background: var(--c-card); border: 1.5px solid var(--c-border); border-radius: var(--r-input); overflow: hidden; transition: border-color .15s; }
+.input-suffix { display: flex; background: var(--c-card); border: 1.5px solid var(--c-border); border-radius: var(--r-input); overflow: hidden; transition: border-color .15s; position: relative; }
 .input-suffix:focus-within, .input-suffix.filled { border-color: var(--c-navy); }
 .input-suffix.error { border-color: var(--c-red); }
-.input-suffix input { flex: 1; border: none; padding: 13px 15px; font-size: 14px; color: var(--c-text-primary); outline: none; background: transparent; -webkit-appearance: none; }
-.input-sfx { padding: 0 13px; font-size: 12px; font-weight: 500; color: var(--c-text-muted); border-left: 1.5px solid var(--c-border); display: flex; align-items: center; background: var(--c-bg); }
+.input-suffix input { flex: 1; border: none; padding: 13px 15px; padding-right: 40px; font-size: 14px; color: var(--c-text-primary); outline: none; background: transparent; -webkit-appearance: none; }
+.input-suffix .input-sfx { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 500; color: var(--c-text-muted); pointer-events: none; }
 
 .hint { font-size: 11px; color: var(--c-text-muted); margin-top: 6px; padding-left: 3px; }
 .hint.ok { color: var(--c-lime-text); }
