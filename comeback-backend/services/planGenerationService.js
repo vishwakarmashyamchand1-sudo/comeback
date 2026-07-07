@@ -37,7 +37,10 @@ User Profile:
 
     if (isReturning) {
       prompt += `- Baseline Data: ${JSON.stringify(baselineData)}\n`;
-      prompt += `Important: Since they are a returning user, use their baseline lifts to estimate challenging starting weights for their core lifts.\n`;
+      prompt += `Important: Since they are an experienced user (returning or active) with provided baseline lifts, use their baseline data to estimate challenging starting weights for their core lifts.\n`;
+    } else if (user.fitnessLevel === 'returning' || user.fitnessLevel === 'active') {
+      prompt += `- Baseline Data: None provided\n`;
+      prompt += `Important: Since they are an experienced user (${user.fitnessLevel}) but did NOT provide baseline lifts, suggest moderate, challenging starting weights that they can safely adjust during their Discovery Week.\n`;
     } else {
       prompt += `- Baseline Data: None provided (Beginner)\n`;
       prompt += `Important: Since they are a beginner, suggest lighter weights (e.g. 5-10kg), machines, or bodyweight exercises to safely build their foundation. Keep the volume manageable.\n`;
@@ -51,7 +54,7 @@ Each of the 7 daily objects must match this schema:
 - 'exercises' (array of objects, empty if rest day)
   - 'exerciseName' (string)
   - 'muscleGroup' (string)
-  - 'sets' (array of objects: 'setNumber' (number), 'plannedReps' (number), 'plannedWeight' (number)). CRITICAL: Do NOT make every set identical! You must simulate progressive overload or warm-ups (e.g., Set 1: 15 reps @ 10kg, Set 2: 12 reps @ 15kg, Set 3: 10 reps @ 20kg).
+  - 'sets' (array of objects: 'setNumber' (number), 'plannedReps' (number), 'plannedWeight' (number)). CRITICAL: Do NOT make every set identical! You must simulate progressive overload or warm-ups (e.g., Set 1: 15 reps @ 10kg, Set 2: 12 reps @ 15kg, Set 3: 10 reps @ 20kg). Even for bodyweight exercises or stretches where weight is 0, the reps MUST STILL DECREASE per set (e.g., 15, 12, 10) to represent progressive intensity!
   - 'antigravityReasoning' (string)
   - 'benefits' (string)`;
 
@@ -126,6 +129,7 @@ Generate the strict JSON response.`;
   }
 };
 
+
 // 3. Generate Daily Nutrition Tip
 const generateDietTip = async (mealsData, totals, proteinAvg) => {
   try {
@@ -156,11 +160,61 @@ Give a specific, practical, and highly personalized tip based on this data.`;
   } catch (error) {
     console.error("[Antigravity Error]:", error);
     return "Keep up the great work with your nutrition today!"; // Fallback tip
+
+// 3. Generate Swap Muscle Plan (Called on UI Muscle Change)
+const generateSwapMusclePlan = async (contextPayload, targetMuscleGroup) => {
+  try {
+    console.log(`[Antigravity] Generating alternative plan for: ${targetMuscleGroup}...`);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    
+    let prompt = `You are Comeback, an elite personal trainer.
+Review the user's Context String. The user has explicitly requested to change their upcoming workout focus to: ${targetMuscleGroup}.
+You MUST return ONLY a valid JSON object matching this schema. Do not include markdown code blocks.
+
+{
+  "exercises": [
+    {
+      "exerciseName": "String",
+      "muscleGroup": "String",
+      "sets": [
+        { "setNumber": 1, "plannedReps": 10, "plannedWeight": 20 }
+      ],
+      "antigravityReasoning": "String",
+      "benefits": "String"
+    }
+  ]
+}
+
+CRITICAL RULES:
+- Only generate exercises that target the requested muscle group (${targetMuscleGroup}).
+- For sets, ensure you apply progressive overload principles (e.g. decrease reps slightly on subsequent sets).
+- Limit the total exercises to 3-5 appropriate for a single session.
+
+Here is the Context String:
+${contextPayload}
+
+Generate the strict JSON response.`;
+
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text().trim();
+    
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    const parsedPlan = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(responseText);
+    
+    console.log('[Antigravity] Successfully generated swap muscle plan.');
+    return parsedPlan;
+  } catch (error) {
+    console.error("[Antigravity Error]:", error);
+    throw new Error("Failed to generate swap muscle plan");
   }
 };
 
 module.exports = {
   generateWeek1Plan,
   generateTomorrowPlan,
+
   generateDietTip
+
+  generateSwapMusclePlan
+
 };

@@ -147,7 +147,7 @@ function PlanReady({ onRestart, onContinue }) {
         </svg>
       </div>
       <div className="gen-title">Your plan is ready, {name}</div>
-      <div className="gen-sub">12-week comeback plan · 4 days / week<br />Tailored to your goals, gym and health.</div>
+      <div className="gen-sub">Week 1 comeback plan · {state.profile?.daysPerWeek || 4} days / week<br />Tailored to your goals, gym and health.</div>
       <div style={{ width: '100%', marginTop: 8 }}>
         <button className="btn btn-lime" onClick={onContinue}>
           Let's go <i className="ti ti-arrow-right btn-icon" />

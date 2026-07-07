@@ -596,6 +596,8 @@ const restoreExercise = asyncHandler(async (req, res) => {
 const swapMuscle = asyncHandler(async (req, res) => {
   const User = require('../models/User');
   const Workout = require('../models/Workout');
+  const Exercise = require('../models/Exercise');
+  const { generateSwapMusclePlan } = require('../services/planGenerationService');
 
   const { muscleGroup, currentPlanId } = req.body;
 
@@ -611,7 +613,7 @@ const swapMuscle = asyncHandler(async (req, res) => {
     throw new Error('User not found');
   }
 
-  // 2. Step 54 & 55: Check if the muscle was trained in the last 48 hours to protect the user
+  // 2. Check if the muscle was trained in the last 48 hours to protect the user
   const twoDaysAgo = new Date();
   twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
@@ -627,30 +629,97 @@ const swapMuscle = asyncHandler(async (req, res) => {
     recoveryWarning = `You just trained ${muscleGroup} recently. Are you sure you are fully recovered?`;
   }
 
-  // 3. Step 56, 57, 58: Generate Preview Plan (Simulating Claude AI)
-  // We generate a fake plan in memory, but we DO NOT save it to the database yet!
-  const previewPlan = {
-    _id: "PREVIEW_ONLY_NOT_SAVED_YET",
-    sessionType: muscleGroup,
-    status: "planned",
-    planSource: "muscle_swap",
-    exercises: [
-      {
-        exerciseName: `AI Generated ${muscleGroup} Exercise 1`,
-        muscleGroup: muscleGroup,
-        sets: [
-          { setNumber: 1, plannedReps: 12, plannedWeight: 20 },
-          { setNumber: 2, plannedReps: 10, plannedWeight: 25 }
-        ]
+  // 3. Call AI to generate swap muscle plan
+  try {
+    const targetDate = new Date(); 
+    targetDate.setDate(targetDate.getDate() + 1); // Tomorrow
+    
+    const contextPayload = await buildUserContext(user._id, targetDate);
+    const aiResponse = await generateSwapMusclePlan(contextPayload, muscleGroup);
+    
+    // Resolve exercise IDs for the AI generated exercises with exact fallback logic
+    const finalExercises = [];
+    if (aiResponse.exercises) {
+      for (const ex of aiResponse.exercises) {
+        let dbEx = await Exercise.findOne({ name: new RegExp(`^${ex.exerciseName}$`, 'i') });
+        if (!dbEx) {
+          const words = (ex.exerciseName || '').split(' ').filter(w => w.length > 2);
+          if (words.length > 0) {
+            const regexQuery = words.map(w => ({ name: new RegExp(w, 'i') }));
+            dbEx = await Exercise.findOne({ $and: regexQuery });
+          }
+          if (!dbEx && words.length > 0) {
+            dbEx = await Exercise.findOne({ name: new RegExp(words[words.length - 1], 'i') });
+          }
+        }
+        // Fallback to ANY exercise matching the requested muscle group
+        if (!dbEx && ex.muscleGroup) {
+          dbEx = await Exercise.findOne({ 
+            $or: [
+              { targetMuscle: new RegExp(`^${ex.muscleGroup}$`, 'i') },
+              { muscleGroup: new RegExp(`^${ex.muscleGroup}$`, 'i') }
+            ]
+          });
+        }
+        // Last resort fallback so we never drop the exercise
+        if (!dbEx) {
+          dbEx = await Exercise.findOne();
+        }
+        
+        if (dbEx) {
+          finalExercises.push({
+            ...ex,
+            exerciseName: dbEx.name,
+            exerciseId: dbEx._id
+          });
+        }
       }
-    ]
-  };
+    }
 
-  // 4. Return the preview to the frontend exactly as the Sir requested
-  res.status(200).json({
-    newPlan: previewPlan,
-    recoveryWarning: recoveryWarning
-  });
+    const previewPlan = {
+      _id: "PREVIEW_ONLY_NOT_SAVED_YET",
+      sessionType: muscleGroup,
+      status: "planned",
+      planSource: "muscle_swap",
+      exercises: finalExercises
+    };
+
+    res.status(200).json({
+      newPlan: previewPlan,
+      recoveryWarning: recoveryWarning
+    });
+  } catch (error) {
+    console.error("Failed to generate swap muscle plan, attempting fallback:", error);
+    
+    try {
+      // Fallback: Check if the user already has a workout for this muscle group scheduled in their 7 day plan
+      const fallbackWorkout = await Workout.findOne({
+        userId: user._id,
+        sessionType: { $regex: new RegExp(`^${muscleGroup}$`, 'i') },
+        type: { $ne: 'Rest' },
+        exercises: { $exists: true, $not: { $size: 0 } }
+      });
+      
+      if (fallbackWorkout && fallbackWorkout.exercises && fallbackWorkout.exercises.length > 0) {
+        const previewPlan = {
+          _id: "PREVIEW_ONLY_NOT_SAVED_YET",
+          sessionType: muscleGroup,
+          status: "planned",
+          planSource: "muscle_swap", // this ensures the days get physically swapped on confirm
+          exercises: fallbackWorkout.exercises
+        };
+        
+        return res.status(200).json({
+          newPlan: previewPlan,
+          recoveryWarning: recoveryWarning
+        });
+      }
+    } catch (fallbackError) {
+      console.error("Fallback query also failed:", fallbackError);
+    }
+    
+    res.status(500).json({ success: false, message: "AI generation failed and no fallback available" });
+  }
 });
 
 /**
@@ -682,6 +751,48 @@ const confirmPlan = asyncHandler(async (req, res) => {
   if (!workout) {
     res.status(404);
     throw new Error('Workout not found');
+  }
+
+  // If a muscle swap occurred, physically swap the days in the user's weekly split
+  if (planSource === 'muscle_swap' && exercises.length > 0 && exercises[0].muscleGroup) {
+    const targetMuscle = exercises[0].muscleGroup;
+    
+    // Determine the current offset of the workout being confirmed
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const workoutDate = new Date(workout.date);
+    workoutDate.setHours(0, 0, 0, 0);
+    
+    // Calculate difference in days (offset)
+    const diffTime = Math.abs(workoutDate - today);
+    const currentOffset = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Find the offset of the target muscle in the user's weekly split
+    let swapOffset = -1;
+    if (user.weeklyPlanSplit) {
+      swapOffset = user.weeklyPlanSplit.findIndex(m => m.toLowerCase() === targetMuscle.toLowerCase());
+    }
+    
+    if (swapOffset !== -1 && currentOffset !== swapOffset && user.weeklyPlanSplit.length > Math.max(currentOffset, swapOffset)) {
+      // Swap the elements
+      const temp = user.weeklyPlanSplit[currentOffset];
+      user.weeklyPlanSplit[currentOffset] = user.weeklyPlanSplit[swapOffset];
+      user.weeklyPlanSplit[swapOffset] = temp;
+      
+      // Update the workout's sessionType to reflect the new muscle group correctly
+      workout.sessionType = user.weeklyPlanSplit[currentOffset];
+      
+      // Mark array as modified so Mongoose saves it
+      user.markModified('weeklyPlanSplit');
+      
+      // Save the modified split
+      await user.save();
+    }
+  } else if (planSource === 'muscle_swap' && exercises.length > 0) {
+    // Even if no offset was provided, make sure the sessionType matches the new plan's target muscle
+    if (exercises[0].muscleGroup) {
+      workout.sessionType = exercises[0].muscleGroup;
+    }
   }
 
   // Step 61: Replace the old exercises array with the new confirmed plan!
@@ -826,6 +937,9 @@ const completeWorkout = asyncHandler(async (req, res) => {
       }
     }
     await metric.save();
+
+    // Update PR count on the workout document itself
+    workout.prCount = newPRs.length;
   }
 
   // 6. Steps 48, 49, 50, 51: Call Antigravity API
@@ -858,6 +972,20 @@ const completeWorkout = asyncHandler(async (req, res) => {
             dbEx = await Exercise.findOne({ name: new RegExp(words[words.length - 1], 'i') });
           }
         }
+        // Fallback to ANY exercise matching the requested muscle group
+        if (!dbEx && ex.muscleGroup) {
+          dbEx = await Exercise.findOne({ 
+            $or: [
+              { targetMuscle: new RegExp(`^${ex.muscleGroup}$`, 'i') },
+              { muscleGroup: new RegExp(`^${ex.muscleGroup}$`, 'i') }
+            ]
+          });
+        }
+        // Last resort fallback so we never drop the exercise
+        if (!dbEx) {
+          dbEx = await Exercise.findOne();
+        }
+        
         if (dbEx) {
           finalExercises.push({
             ...ex,
@@ -898,8 +1026,8 @@ const completeWorkout = asyncHandler(async (req, res) => {
     tomorrowDate.setDate(tomorrowDate.getDate() + 1);
     const existingTomorrowPlan = await Workout.findOne({ userId: user._id, date: tomorrowDate });
 
-    res.status(500).json({
-      success: false,
+    res.status(200).json({
+      success: true,
       message: "Summary unavailable",
       workout: workout,
       aiSummary: null,

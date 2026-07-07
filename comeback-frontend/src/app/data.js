@@ -85,7 +85,7 @@ export const browserExercises = [
   { name: 'Romanian deadlift', equip: 'Barbell', muscle: 'Legs' },
 ];
 
-export const muscleFilters = ['All', 'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Glutes', 'Core'];
+export const muscleFilters = ['All', 'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Glutes', 'Core', 'Abs', 'Calves', 'Forearms', 'Cardio'];
 
 // User profile (feeds the same store as onboarding)
 export const profile = {

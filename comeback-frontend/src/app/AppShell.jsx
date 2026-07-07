@@ -53,6 +53,7 @@ export default function AppShell() {
                 muscleGroup: e.exerciseId?.muscleGroup || e.muscleGroup || '',
                 targetMuscle: e.exerciseId?.targetMuscle || '',
                 gifUrl: e.exerciseId?.gifUrl || '',
+                equipment: e.exerciseId?.equipment || '',
                 whyLabel: e.exerciseId?.whyLabel || e.benefits || '',
                 wasSubstituted: e.wasSubstituted || false,
                 substitutedFrom: e.substitutedFrom || '',
@@ -125,7 +126,7 @@ export default function AppShell() {
   if (top === 'active') overlay = <ActiveWorkout workout={workout} onBack={pop} onFinish={() => setStack(['post'])} onSwap={(muscle) => { setBrowserMuscle(muscle || 'All'); push('browser'); }} />;
   if (top === 'post') overlay = <PostSession 
     workout={workout} 
-    onDone={() => { setWorkoutDone(true); reset(); }} 
+    onDone={() => { setWorkoutDone(true); reset(); fetchWorkoutByOffset(0); }} 
     onModify={() => { 
       setWorkoutDone(true); 
       reset(); 

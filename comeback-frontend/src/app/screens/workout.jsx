@@ -16,6 +16,7 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
   const w = workout || todayWorkout; // fallback
   const [dayType, setDayType] = useState(w.sessionType || w.type || 'Full Body');
   const [dayOpen, setDayOpen] = useState(false);
+  const [showAllEx, setShowAllEx] = useState(false);
 
   // Dynamically generate the title based on the selected dayType safely
   const safeDayType = (typeof dayType === 'string' && dayType.trim() !== '') ? dayType : 'Full Body';
@@ -43,6 +44,15 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
     }
   }, [state.token]);
 
+  // Dynamic program timeline calculation
+  const joinDate = state.profile?.createdAt ? new Date(state.profile.createdAt) : new Date();
+  joinDate.setHours(0,0,0,0);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const diffDays = Math.floor((today - joinDate) / (1000 * 60 * 60 * 24)) + 1;
+  const computedWeek = Math.ceil(diffDays / 7) || 1;
+  const computedDay = diffDays % 7 === 0 ? 7 : diffDays % 7;
+
   return (
     <div className="app-body">
       <div className="screen-pad scroll">
@@ -50,7 +60,7 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
           <div>
             <div style={{ marginBottom: 10 }}><Wordmark /></div>
             <div className="greeting" style={{ textTransform: 'capitalize' }}>{greet}, {userName}</div>
-            <div className="subtle">{currentDay} · Week {w.week} · Day {w.day}</div>
+            <div className="subtle">{currentDay} · Week {w.week || w.weekNumber || computedWeek} · Day {w.day || computedDay}</div>
           </div>
           <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
             <button className="icon-btn"><i className="ti ti-bell" />{!done && <span className="dot-red" />}</button>
@@ -79,32 +89,58 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
           </div>
 
           {done ? (
-            <>
-              <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-                {[['47m', 'Duration', true], ['15/15', 'Sets done', false], ['1', 'New PR', true]].map(([v, l, lime]) => (
-                  <div key={l} style={{ flex: 1, background: '#ffffff0D', borderRadius: 12, padding: 11 }}>
-                    <div style={{ fontSize: 18, fontWeight: 600, color: lime ? '#C8F25C' : '#fff' }}>{v}</div>
-                    <div style={{ fontSize: 11, color: '#8A8AAA', marginTop: 2 }}>{l}</div>
+            (() => {
+              const totalSets = w?.exercises?.reduce((sum, ex) => sum + (ex.wasSkipped ? 0 : (Array.isArray(ex.actualSetsArray || ex.sets) ? (ex.actualSetsArray || ex.sets).length : Number(ex.sets) || 0)), 0) || 0;
+              const completedSets = w?.exercises?.reduce((sum, ex) => sum + (ex.wasSkipped ? 0 : (Array.isArray(ex.actualSetsArray || ex.sets) ? (ex.actualSetsArray || ex.sets).filter(s => s.completed).length : 0)), 0) || 0;
+              const duration = w?.sessionDurationMins ? `${w.sessionDurationMins}m` : (w?.durationMin ? `${w.durationMin}m` : '0m');
+              const prs = w?.prCount || 0;
+              
+              return (
+                <>
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                    {[[duration, 'Duration', true], [`${completedSets}/${totalSets}`, 'Sets done', false], [`${prs}`, 'New PR', true]].map(([v, l, lime]) => (
+                      <div key={l} style={{ flex: 1, background: '#ffffff0D', borderRadius: 12, padding: 11 }}>
+                        <div style={{ fontSize: 18, fontWeight: 600, color: lime ? '#C8F25C' : '#fff' }}>{v}</div>
+                        <div style={{ fontSize: 11, color: '#8A8AAA', marginTop: 2 }}>{l}</div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <button className="btn" style={{ background: '#ffffff14', color: '#fff', borderColor: 'transparent' }} onClick={onViewSummary}>View summary</button>
-            </>
+                  <button className="btn" style={{ background: '#ffffff14', color: '#fff', borderColor: 'transparent' }} onClick={onViewSummary}>View summary</button>
+                </>
+              );
+            })()
           ) : (
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 16 }}>
-                {w.exercises.filter(e => !e.wasSkipped).slice(0, 3).map((e, i) => (
-                  <React.Fragment key={e.id || e.name}>
-                    {i > 0 && <div className="rowline dark" />}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                      <span style={{ color: '#D8D8E4' }}>{e.name}</span><span style={{ color: '#8A8AAA' }}>{e.sets} × {e.reps}</span>
-                    </div>
-                  </React.Fragment>
-                ))}
-                <div style={{ fontSize: 12, color: '#6A6A8A', marginTop: 2 }}>+ {Math.max(0, w.exercises.filter(e => !e.wasSkipped).length - 3)} more · ~{w.durationMin} mins</div>
-              </div>
-              <button className="btn btn-lime" onClick={onStart}>Start workout <i className="ti ti-arrow-right btn-icon" /></button>
-            </>
+            (() => {
+              const unskippedEx = w.exercises.filter(e => !e.wasSkipped);
+              const displayLimit = showAllEx ? unskippedEx.length : 3;
+              const estimatedMins = w.durationMin || Math.round((w.exercises?.reduce((sum, ex) => sum + (ex.wasSkipped ? 0 : (Array.isArray(ex.sets) ? ex.sets.length : Number(ex.sets) || 0)), 0) || 0) * 2.5);
+              
+              return (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 16 }}>
+                    {unskippedEx.slice(0, displayLimit).map((e, i) => (
+                      <React.Fragment key={e.id || e.name}>
+                        {i > 0 && <div className="rowline dark" />}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                          <span style={{ color: '#D8D8E4' }}>{e.name}</span><span style={{ color: '#8A8AAA' }}>{Array.isArray(e.sets) ? e.sets.length : e.sets} × {Array.isArray(e.sets) ? (e.sets[0]?.plannedReps || 10) : e.reps}</span>
+                        </div>
+                      </React.Fragment>
+                    ))}
+                    {unskippedEx.length > 3 && !showAllEx && (
+                      <div onClick={() => setShowAllEx(true)} style={{ fontSize: 12, color: '#C8F25C', marginTop: 2, cursor: 'pointer' }}>
+                        + {unskippedEx.length - 3} more · ~{estimatedMins} mins
+                      </div>
+                    )}
+                    {showAllEx && (
+                      <div onClick={() => setShowAllEx(false)} style={{ fontSize: 12, color: '#6A6A8A', marginTop: 2, cursor: 'pointer' }}>
+                        Show less · ~{estimatedMins} mins
+                      </div>
+                    )}
+                  </div>
+                  <button className="btn btn-lime" onClick={onStart}>Start workout <i className="ti ti-arrow-right btn-icon" /></button>
+                </>
+              );
+            })()
           )}
         </div>
 
@@ -165,24 +201,89 @@ function Metric({ label, val, target, value, max }) {
 export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddExercise, refreshWorkout, isModifyMode }) {
   const { state } = useOnboarding();
   const w = workout || todayWorkout;
-  const restDay = w.type === 'Rest';
+  
+  const [pendingOverride, setPendingOverride] = useState(null);
+  const activeW = pendingOverride || w;
+  const restDay = activeW.type === 'Rest' || activeW.sessionType === 'Rest' || activeW.status === 'rest_day';
 
-  const [rows, setRows] = useState(() => w.exercises.map(e => ({ 
+  const [rows, setRows] = useState(() => (activeW.exercises || []).map(e => ({ 
     ...e, 
     state: e.wasSkipped ? 'skipped' : (e.wasSubstituted ? 'sub' : (e.addedByUser ? 'added' : 'active')),
     was: e.substitutedFrom || e.was
   })));
   const [pickerFor, setPickerFor] = useState(null); // exercise id being substituted
   const [dayOpen, setDayOpen] = useState(false);
-  const [dayType, setDayType] = useState(w.sessionType || w.type || 'Full Body');
+  const [dayType, setDayType] = useState(activeW.sessionType || activeW.type || 'Full Body');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
-    setRows(w.exercises.map(e => ({ 
+    setRows((activeW.exercises || []).map(e => ({ 
       ...e, 
       state: e.wasSkipped ? 'skipped' : (e.wasSubstituted ? 'sub' : (e.addedByUser ? 'added' : 'active')),
       was: e.substitutedFrom || e.was
     })));
-  }, [w.exercises]);
+  }, [activeW.exercises]);
+
+  const swapMuscle = async (targetMuscle) => {
+    if (!w._id || !state.token) return;
+    setIsGenerating(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/tomorrow/swap-muscle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+        body: JSON.stringify({ muscleGroup: targetMuscle, currentPlanId: w._id })
+      });
+      const data = await res.json();
+      
+      if (res.ok && data.newPlan) {
+        if (data.recoveryWarning) {
+          if (!window.confirm(data.recoveryWarning + "\n\nPress OK to proceed anyway.")) {
+            setIsGenerating(false);
+            return;
+          }
+        }
+        setPendingOverride(data.newPlan);
+        setDayType(targetMuscle);
+      } else {
+        alert(data.message || "Failed to generate new plan");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const confirmOverride = async () => {
+    if (!pendingOverride || !w._id || !state.token) {
+      onBack();
+      return;
+    }
+    
+    setIsGenerating(true); // repurpose loading screen for save
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/confirm`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+        body: JSON.stringify({ 
+          exercises: pendingOverride.exercises, 
+          planSource: pendingOverride.planSource
+        })
+      });
+      if (res.ok) {
+        if (refreshWorkout) refreshWorkout();
+        onBack();
+      } else {
+        alert("Failed to save changes");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save changes");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const skipExercise = async (id) => {
     // Optimistic UI
@@ -259,20 +360,40 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
   if (restDay) {
     return (
       <div className="app-body">
-        <PushHeader title={isModifyMode ? "Tomorrow's workout" : "Today's workout"} onBack={onBack} right="ti-calendar" />
+        <PushHeader title={isModifyMode ? "Tomorrow's workout" : "Today's workout"} onBack={onBack} right="ti-calendar" onRight={() => setDayOpen(true)} />
         <div className="screen-pad" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           <div style={{ width: 88, height: 88, borderRadius: '50%', background: '#E8E8F5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 22 }}><i className="ti ti-moon" style={{ fontSize: 40, color: '#1A1A2E' }} /></div>
           <div style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-.03em', color: '#1A1A2E', marginBottom: 8 }}>Rest day</div>
           <div style={{ fontSize: 14, color: '#8A8A85', lineHeight: 1.6, maxWidth: 250, marginBottom: 26 }}>Recovery is where the comeback happens. Your muscles rebuild today.</div>
           <div style={{ maxWidth: 300 }}><CoachCard>Take a 20-min walk and hit your protein. Push day is back tomorrow — come rested.</CoachCard></div>
+          <button className="btn" style={{ background: '#F5F5F3', color: '#1A1A2E', marginTop: 32, padding: '12px 24px', borderRadius: 12, fontWeight: 600, fontSize: 14 }} onClick={() => setDayOpen(true)}>
+            <i className="ti ti-repeat" style={{ marginRight: 8 }}/> Swap to a workout
+          </button>
         </div>
+        
+        <div className="sticky-cta">
+          {isModifyMode ? (
+            <button className="btn btn-primary" onClick={pendingOverride ? confirmOverride : onBack}>Reviewed <i className="ti ti-check btn-icon" /></button>
+          ) : (
+            <button className="btn btn-primary" onClick={onStart || onBack}>Got it <i className="ti ti-check btn-icon" /></button>
+          )}
+        </div>
+
+        {dayOpen && <ChangeDaySheet current={dayType} weeklyPlanSplit={weeklyPlanSplit} onClose={() => setDayOpen(false)} onPick={t => { setDayOpen(false); swapMuscle(t); }} />}
+        {isGenerating && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.9)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} />
+            <div style={{ marginTop: 24, fontSize: 15, color: '#1A1A2E', fontWeight: 600 }}>Building your plan...</div>
+            <div style={{ fontSize: 13, color: '#8A8A85', marginTop: 8 }}>This takes a few seconds</div>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <div className="app-body">
-      <PushHeader title={isModifyMode ? "Tomorrow's plan" : "Today's workout"} onBack={onBack} right="ti-calendar" />
+      <PushHeader title={isModifyMode ? "Tomorrow's plan" : "Today's workout"} onBack={onBack} right="ti-calendar" onRight={() => setDayOpen(true)} />
       <div className="screen-pad scroll" style={{ paddingTop: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <span className="badge green"><i className="ti ti-barbell" /> {dayType}</span>
@@ -289,8 +410,8 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
                 <div key={e.id} className="card" style={{ padding: 13, display: 'flex', gap: 12, alignItems: 'center', background: '#F5F5F3', opacity: .7 }}>
                   <Thumb style={{ color: '#C8C8C4' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                      <span style={{ fontSize: 15, fontWeight: 600, color: '#8A8A85', textDecoration: 'line-through' }}>{e.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: '#8A8A85', textDecoration: 'line-through', textTransform: 'capitalize' }}>{e.exerciseName || e.name}</span>
                       <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#EAEAE6', color: '#8A8A85' }}>Skipped</span>
                     </div>
                     <div style={{ fontSize: 11, color: '#8A8A85' }}>Tap to restore for today</div>
@@ -306,13 +427,15 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   <Thumb />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                      <span style={{ fontSize: 15, fontWeight: 600, color: '#1A1A2E' }}>{e.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: '#1A1A2E', textTransform: 'capitalize' }}>{e.exerciseName || e.name}</span>
                       {sub && <span className="badge amber" style={{ fontSize: 10, padding: '2px 8px' }}>Substituted</span>}
                       {added && <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#DBEAFE', color: '#1D4ED8' }}>Added</span>}
                       <span className="badge neutral" style={{ fontSize: 10, padding: '2px 8px' }}>{e.muscleGroup || e.targetMuscle}</span>
                     </div>
-                    <div style={{ fontSize: 12, color: '#8A8A85', marginBottom: 3 }}>{e.sets} × {e.reps} × {e.weight}kg</div>
+                    <div style={{ fontSize: 12, color: '#8A8A85', marginBottom: 3 }}>
+                      {Array.isArray(e.sets) ? e.sets.length : (e.sets || 3)} × {e.reps || (Array.isArray(e.sets) && e.sets[0]?.plannedReps) || '10-12'} × {e.weight || (Array.isArray(e.sets) && e.sets[0]?.plannedWeight) || 0}kg
+                    </div>
                     <div style={{ fontSize: 11, color: (sub || added) ? '#8A8A85' : '#3A7A0A' }}>{sub ? `Was: ${e.was} · swapped by you` : (added ? 'Added manually by you' : e.why)}</div>
                   </div>
                   <i className="ti ti-chevron-down" style={{ color: '#8A8A85', fontSize: 18, flex: 'none' }} />
@@ -334,54 +457,64 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
           <span style={{ color: '#8A8A85' }}>Coach-balanced ✓</span>
         </div>
         {isModifyMode ? (
-          <button className="btn btn-primary" onClick={onBack}>Reviewed <i className="ti ti-check btn-icon" /></button>
+          <button className="btn btn-primary" onClick={pendingOverride ? confirmOverride : onBack}>Reviewed <i className="ti ti-check btn-icon" /></button>
         ) : (
           <button className="btn btn-primary" onClick={onStart}>Start workout <i className="ti ti-arrow-right btn-icon" /></button>
         )}
       </div>
 
-      {dayOpen && <ChangeDaySheet current={dayType} weeklyPlanSplit={weeklyPlanSplit} onClose={() => setDayOpen(false)} onPick={t => { setDayType(t); setDayOpen(false); }} />}
+      {dayOpen && <ChangeDaySheet current={dayType} weeklyPlanSplit={weeklyPlanSplit} onClose={() => setDayOpen(false)} onPick={t => { setDayOpen(false); swapMuscle(t); }} />}
       {pickerFor && (
         <SubstituteSheet 
-          exerciseDbId={workout?.exercises?.find(e => e.id === pickerFor)?.exerciseDbId} 
+          exerciseDbId={activeW?.exercises?.find(e => e.id === pickerFor)?.exerciseDbId || activeW?.exercises?.find(e => e.id === pickerFor)?.exerciseId} 
           onClose={() => setPickerFor(null)} 
           onPick={(name, newDbId) => { substitute(pickerFor, name, newDbId); setPickerFor(null); }} 
         />
+      )}
+      
+      {isGenerating && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.9)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} />
+          <div style={{ marginTop: 24, fontSize: 15, color: '#1A1A2E', fontWeight: 600 }}>Building your plan...</div>
+          <div style={{ fontSize: 13, color: '#8A8A85', marginTop: 8 }}>This takes a few seconds</div>
+        </div>
       )}
     </div>
   );
 }
 
 export function ChangeDaySheet({ current, weeklyPlanSplit, onClose, onPick }) {
-  let dynamicDays = [];
+  let options = [];
+
   if (Array.isArray(weeklyPlanSplit) && weeklyPlanSplit.length > 0) {
-    dynamicDays = weeklyPlanSplit.map((name, i) => {
+    options = weeklyPlanSplit.map((name, i) => {
       const d = new Date();
       d.setDate(d.getDate() + i);
       let dateLabel = '';
       if (i === 0) dateLabel = 'Today';
       else if (i === 1) dateLabel = 'Tomorrow';
       else dateLabel = d.toLocaleDateString('en-US', { weekday: 'long' });
-      return { name, dateLabel, uniqueId: `${name}-${i}`, offset: i };
-    }).filter(d => typeof d.name === 'string'); // Only ensure it's a valid string, don't filter rest or duplicates
+
+      const safeName = typeof name === 'string' ? name : 'Workout';
+      const searchName = safeName.toLowerCase().split(' ')[0];
+      let match = dayTypes.find(d => typeof d.name === 'string' && d.name.toLowerCase().includes(searchName));
+      
+      if (!match && searchName === 'rest') {
+        match = { icon: 'ti-moon', muscles: 'Recovery & rebuild' };
+      }
+
+      return {
+        id: `${safeName}-${i}`,
+        name: safeName,
+        icon: match?.icon || 'ti-barbell',
+        muscles: match?.muscles || 'AI generated focus',
+        dateLabel,
+        offset: i
+      };
+    });
+  } else {
+    options = dayTypes.map((dt, i) => ({ ...dt, id: dt.name, offset: i }));
   }
-  
-  const options = dynamicDays.length > 0 
-    ? dynamicDays.map((data) => {
-        const safeName = data.name;
-        const searchName = safeName.toLowerCase().split(' ')[0];
-        let match = dayTypes.find(d => typeof d.name === 'string' && d.name.toLowerCase().includes(searchName));
-        
-        // Special fallback icon for Rest days
-        if (!match && searchName === 'rest') {
-          match = { icon: 'ti-moon', muscles: 'Recovery & rebuilt' };
-        }
-        
-        return match 
-          ? { ...match, name: safeName, id: data.uniqueId, dateLabel: data.dateLabel, offset: data.offset } 
-          : { id: data.uniqueId, name: safeName, icon: 'ti-barbell', muscles: 'AI generated focus', dateLabel: data.dateLabel, offset: data.offset };
-      })
-    : dayTypes;
 
   const safeCurrent = typeof current === 'string' ? current : '';
 
@@ -599,32 +732,43 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
 
       <div className="screen-pad scroll" style={{ paddingTop: 2 }}>
         <div className="card" style={{ borderRadius: 18, padding: 14, marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-.02em', color: '#1A1A2E' }}>{ex.name}</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-.02em', color: '#1A1A2E', textTransform: 'capitalize' }}>{ex.exerciseName || ex.name}</span>
             <span className="badge neutral" style={{ fontSize: 10 }}>{ex.muscleGroup || ex.targetMuscle}</span>
           </div>
           <div className="thumb" style={{ height: 170, borderRadius: 14, fontSize: 30, marginBottom: 14, position: 'relative', overflow: 'hidden' }}>
             {ex.gifUrl ? (
-              <img src={ex.gifUrl} alt={ex.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={ex.gifUrl} alt={ex.exerciseName || ex.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             ) : (
               <i className="ti ti-photo" />
             )}
             <span style={{ position: 'absolute', bottom: 10, left: 12, fontSize: 11, color: '#8A8A85', background: '#ffffffcc', padding: '3px 9px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4 }}><i className="ti ti-player-play" style={{ fontSize: 12 }} /> Demo</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr 1fr 32px', gap: 8, fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.06em', color: '#8A8A85', padding: '0 4px 8px' }}>
-            <span>Set</span><span>Reps</span><span>Weight</span><span />
-          </div>
-          {cur.map((s, si) => {
-            const isActive = !s.done && cur.slice(0, si).every(x => x.done);
+          {(() => {
+            const noWeight = (ex.equipment && ['body weight', 'assisted'].includes(ex.equipment.toLowerCase())) || ((ex.exerciseName || ex.name) && (ex.exerciseName || ex.name).toLowerCase().includes('stretch'));
             return (
-              <div key={si} className={`set-row ${s.done ? 'done' : isActive ? 'active' : ''}`}>
-                <span className="set-num" style={{ color: s.done ? '#3A7A0A' : '#1A1A2E' }}>{si + 1}</span>
-                <input id={`reps-input-${si}`} className="set-input" inputMode="numeric" placeholder={ex.actualSetsArray && ex.actualSetsArray[si] ? String(ex.actualSetsArray[si].plannedReps || ex.reps) : String(ex.reps)} value={s.reps} onChange={e => setField(si, 'reps', e.target.value)} readOnly={s.done} />
-                <input className="set-input" inputMode="decimal" placeholder={ex.actualSetsArray && ex.actualSetsArray[si] && ex.actualSetsArray[si].plannedWeight ? String(ex.actualSetsArray[si].plannedWeight) : (ex.weight ? String(ex.weight) : '')} value={s.weight} onChange={e => setField(si, 'weight', e.target.value)} readOnly={s.done} />
-                <div className={`set-check ${s.done ? 'on' : 'off'}`} onClick={() => toggle(si)}>{s.done && <i className="ti ti-check" />}</div>
-              </div>
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr 1fr 32px', gap: 8, fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.06em', color: '#8A8A85', padding: '0 4px 8px' }}>
+                  <span>Set</span><span>Reps</span><span>{noWeight ? '' : 'Weight'}</span><span />
+                </div>
+                {cur.map((s, si) => {
+                  const isActive = !s.done && cur.slice(0, si).every(x => x.done);
+                  return (
+                    <div key={si} className={`set-row ${s.done ? 'done' : isActive ? 'active' : ''}`}>
+                      <span className="set-num" style={{ color: s.done ? '#3A7A0A' : '#1A1A2E' }}>{si + 1}</span>
+                      <input id={`reps-input-${si}`} className="set-input" inputMode="numeric" placeholder={ex.actualSetsArray && ex.actualSetsArray[si] ? String(ex.actualSetsArray[si].plannedReps || ex.reps) : String(ex.reps)} value={s.reps} onChange={e => setField(si, 'reps', e.target.value)} readOnly={s.done} />
+                      {noWeight ? (
+                        <div className="set-input" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8A8A85', background: 'transparent', border: 'none' }}>—</div>
+                      ) : (
+                        <input className="set-input" inputMode="decimal" placeholder={ex.actualSetsArray && ex.actualSetsArray[si] && ex.actualSetsArray[si].plannedWeight ? String(ex.actualSetsArray[si].plannedWeight) : (ex.weight ? String(ex.weight) : '')} value={s.weight} onChange={e => setField(si, 'weight', e.target.value)} readOnly={s.done} />
+                      )}
+                      <div className={`set-check ${s.done ? 'on' : 'off'}`} onClick={() => toggle(si)}>{s.done && <i className="ti ti-check" />}</div>
+                    </div>
+                  );
+                })}
+              </>
             );
-          })}
+          })()}
           {!cur.some(s => s.done) && (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
@@ -646,7 +790,7 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
             <Thumb size={38} radius={10} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.06em', color: '#8A8A85' }}>Up next</div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: '#1A1A2E', marginTop: 2 }}>{nextEx.name} · {nextEx.sets}×{nextEx.reps}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: '#1A1A2E', marginTop: 2, textTransform: 'capitalize' }}>{nextEx.exerciseName || nextEx.name} · {nextEx.sets}×{nextEx.reps}</div>
             </div>
             <span style={{ fontSize: 12, fontWeight: 500, color: '#1A1A2E', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }} onClick={() => onSwap(nextEx.muscleGroup || 'All')}><i className="ti ti-refresh" /> Swap</span>
           </div>
@@ -673,6 +817,9 @@ export function PostSession({ workout, onDone, onModify }) {
   const [phase, setPhase] = useState(workout.status === 'completed' ? 'loading' : 'rate'); // rate | loading | summary | confirming
   const [rating, setRating] = useState(8);
   const [feel, setFeel] = useState('Good');
+  
+  const [duration, setDuration] = useState('');
+  
   const [notes, setNotes] = useState('');
   const [summaryData, setSummaryData] = useState(null);
   
@@ -704,6 +851,11 @@ export function PostSession({ workout, onDone, onModify }) {
   }, [workout.status, workout._id, state.token]);
 
   const submitCompletion = async () => {
+    if (!duration || isNaN(Number(duration)) || Number(duration) <= 0) {
+      alert("Please enter a valid workout duration in minutes.");
+      return;
+    }
+    
     setPhase('loading');
     
     // Fallback if not logged in (dummy flow)
@@ -719,7 +871,7 @@ export function PostSession({ workout, onDone, onModify }) {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${workout._id}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
-        body: JSON.stringify({ sessionRating: rating, sessionFeel: feel })
+        body: JSON.stringify({ sessionRating: rating, sessionFeel: feel, sessionDurationMins: Number(duration) })
       });
       const data = await res.json();
       
@@ -778,6 +930,10 @@ export function PostSession({ workout, onDone, onModify }) {
               </div>
             ))}
           </div>
+          <div className="s-label">Duration (minutes)</div>
+          <div style={{ marginBottom: 24 }}>
+            <input type="number" className="input" value={duration} onChange={e => setDuration(e.target.value)} style={{ fontSize: 16, width: 100 }} />
+          </div>
           <div className="s-label">Notes (optional)</div>
           <textarea className="input" rows={3} placeholder="Shoulder felt tight on last set…" style={{ resize: 'none' }} value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
@@ -797,8 +953,8 @@ export function PostSession({ workout, onDone, onModify }) {
   }
 
   const tomorrow = summaryData?.tomorrowPlan || { sessionType: 'Rest Day', dayOfWeek: 'Tomorrow', exercises: [] };
-  const setsDoneCount = summaryData?.workout?.exercises?.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0) || 0;
-  const totalSets = summaryData?.workout?.exercises?.reduce((acc, ex) => acc + ex.sets.length, 0) || 0;
+  const setsDoneCount = summaryData?.workout?.exercises?.reduce((acc, ex) => acc + (Array.isArray(ex.sets) ? ex.sets.filter(s => s.completed).length : 0), 0) || 0;
+  const totalSets = summaryData?.workout?.exercises?.reduce((acc, ex) => acc + (Array.isArray(ex.sets) ? ex.sets.length : Number(ex.sets) || 0), 0) || 0;
   const prCount = summaryData?.newPRs?.length || 0;
   const isRest = tomorrow.status === 'rest_day' || tomorrow.sessionType === 'Rest Day';
 
@@ -813,7 +969,7 @@ export function PostSession({ workout, onDone, onModify }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-          {[['Done', 'Duration', false], [`${setsDoneCount}/${totalSets}`, 'Sets done', false], [String(prCount), 'New PRs', prCount > 0]].map(([v, l, pr]) => (
+          {[[`${summaryData?.workout?.sessionDurationMins || duration}m`, 'Duration', false], [`${setsDoneCount}/${totalSets}`, 'Sets done', false], [String(prCount), 'New PRs', prCount > 0]].map(([v, l, pr]) => (
             <div key={l} className="card" style={{ flex: 1, borderRadius: 14, padding: 13 }}>
               <div style={{ fontSize: 19, fontWeight: 600, color: pr ? '#3A7A0A' : '#1A1A2E', display: 'flex', alignItems: 'center', gap: 3 }}>{v}{pr && <i className="ti ti-trophy" style={{ fontSize: 14 }} />}</div>
               <div style={{ fontSize: 11, color: '#8A8A85', marginTop: 2 }}>{l}</div>

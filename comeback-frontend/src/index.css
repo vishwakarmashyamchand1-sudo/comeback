@@ -35,7 +35,7 @@
   --s-xs: 4px;  --s-sm: 8px;  --s-md: 12px;  --s-lg: 16px;  --s-xl: 24px;  --s-2xl: 32px;  --s-3xl: 48px;
 
   /* Type */
-  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-ui: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
 }
 

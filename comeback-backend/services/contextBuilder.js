@@ -74,6 +74,23 @@ async function buildUserContext(userId, targetDate) {
   } else {
     payload += `New user. No historical weekly summaries yet.\n`;
   }
+  
+  // Find what is currently scheduled in the DB for tomorrow
+  const tomorrowDate = new Date(targetDate);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  tomorrowDate.setUTCHours(0, 0, 0, 0);
+  const nextDayMidnight = new Date(tomorrowDate);
+  nextDayMidnight.setDate(nextDayMidnight.getDate() + 1);
+  
+  const tomorrowPlan = await Workout.findOne({
+    userId,
+    date: { $gte: tomorrowDate, $lt: nextDayMidnight }
+  }).lean();
+  
+  payload += `\n--- SCHEDULE ---\n`;
+  if (tomorrowPlan) {
+    payload += `Tomorrow is pre-scheduled as: "${tomorrowPlan.sessionType}". You MUST generate this exact session type (e.g. if it says Pull Day, generate a Pull Day. If it says Rest, generate Rest). ONLY change it if the user specifically mentions an extreme injury today that requires urgent rest.\n`;
+  }
 
   return payload;
 }

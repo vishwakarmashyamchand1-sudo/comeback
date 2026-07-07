@@ -149,7 +149,7 @@ const completeOnboarding = asyncHandler(async (req, res) => {
   user.dailyProteinTarget = Math.round(user.currentWeightKg * 2.0); // 2g per kg
 
   // 5. Determine if returning or beginner (Steps 19, 23, 24 from the Sir's doc)
-  const isReturning = user.fitnessLevel === 'returning' && user.baselineLifts && Object.keys(user.baselineLifts).length > 0;
+  const isReturning = (user.fitnessLevel === 'returning' || user.fitnessLevel === 'active') && user.baselineLifts && Object.keys(user.baselineLifts).length > 0;
   
   user.onboardingComplete = true;
   user.currentWeekNumber = 1;
@@ -235,30 +235,85 @@ const completeOnboarding = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error("AI Generation failed, using fallback:", error);
     
-    // Fallback logic
+    // Fallback logic dictionary
+    const fallbackSplits = {
+      2: ['Full Body', 'Rest', 'Rest', 'Full Body', 'Rest', 'Rest', 'Rest'],
+      3: ['Push', 'Rest', 'Pull', 'Rest', 'Legs', 'Rest', 'Rest'],
+      4: ['Upper', 'Lower', 'Rest', 'Upper', 'Lower', 'Rest', 'Rest'],
+      5: ['Push', 'Pull', 'Legs', 'Upper', 'Lower', 'Rest', 'Rest'],
+      6: ['Push', 'Pull', 'Legs', 'Push', 'Pull', 'Legs', 'Rest']
+    };
+    
+    const splitKey = [2,3,4,5,6].includes(user.daysPerWeek) ? user.daysPerWeek : 5;
+    const splitPattern = fallbackSplits[splitKey];
+
+    // Fallback exercise skeletons
+    const skeletons = {
+      'Push': ['Bench Press', 'Overhead Press', 'Triceps Pushdown'],
+      'Pull': ['Barbell Row', 'Lat Pulldown', 'Bicep Curl'],
+      'Legs': ['Squat', 'Leg Press', 'Calf Raise'],
+      'Upper': ['Bench Press', 'Barbell Row', 'Overhead Press'],
+      'Lower': ['Squat', 'Romanian Deadlift', 'Leg Curl'],
+      'Full Body': ['Squat', 'Bench Press', 'Barbell Row']
+    };
+
+    const defaultSets = [
+      { setNumber: 1, plannedReps: 15, plannedWeight: 5 },
+      { setNumber: 2, plannedReps: 12, plannedWeight: 10 },
+      { setNumber: 3, plannedReps: 10, plannedWeight: 15 }
+    ];
+
+    const Exercise = require('../models/Exercise');
+
     for (let i = 0; i < 7; i++) {
       const d = new Date();
       d.setUTCHours(0, 0, 0, 0);
       d.setDate(d.getDate() + i);
       
-      const isRestDay = (i % 2 !== 0);
+      const sessionType = splitPattern[i];
+      const isRestDay = sessionType === 'Rest';
+      
+      let finalExercises = [];
+      if (!isRestDay && skeletons[sessionType]) {
+        for (const exName of skeletons[sessionType]) {
+          const dbEx = await Exercise.findOne({ name: new RegExp('^' + exName, 'i') });
+          if (dbEx) {
+            finalExercises.push({
+              exerciseName: dbEx.name,
+              exerciseId: dbEx._id,
+              muscleGroup: dbEx.targetMuscle || 'Various',
+              sets: defaultSets,
+              antigravityReasoning: "Fallback standard exercise.",
+              benefits: "Builds foundational strength."
+            });
+          }
+        }
+      }
       
       const workoutDoc = await Workout.create({
         userId: user._id,
         date: d,
         weekNumber: 1,
         dayOfWeek: days[d.getDay()],
-        sessionType: isRestDay ? 'Rest' : 'Full Body',
+        sessionType: sessionType,
         status: isRestDay ? 'rest_day' : 'planned',
-        exercises: [],
+        exercises: finalExercises,
         planSource: 'ai_generated'
       });
       weekPlan.push(workoutDoc);
     }
+    
+    // Also save the split to user profile so frontend calendar matches
+    user.weeklyPlanSplit = splitPattern;
+    await user.save();
 
     return res.status(500).json({
       success: false,
+<<<<<<< Updated upstream
       message: "AI API failed. Returning fallback template plan.",
+=======
+      message: "Gemini API failed. Returning fallback template plan.",
+>>>>>>> Stashed changes
       weekPlan: weekPlan,
       user: user,
       coachNote: coachNote

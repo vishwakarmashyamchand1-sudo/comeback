@@ -53,6 +53,7 @@ const WorkoutSchema = new mongoose.Schema({
   sessionRating: { type: Number, min: 1, max: 10 },
   sessionFeel:   { type: String, enum: ['Easy', 'Good', 'Hard', 'Exhausted'] },
   sessionDurationMins: { type: Number },
+  prCount: { type: Number, default: 0 },
 
   // ── AI Output ────────────────────────────────
   aiSummary:    { type: String }, // Claude's post-session feedback text

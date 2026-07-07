@@ -45,8 +45,23 @@ const getAllExercises = asyncHandler(async (req, res) => {
   }
 
   // 4. Filters (Step 113)
-  // Use '^' for muscleGroup to allow 'Legs' to match both 'Legs_Quads' and 'Legs_Hamstrings'
-  if (muscleGroup) filter.muscleGroup = new RegExp('^' + muscleGroup, 'i'); 
+  // Check muscleGroup, targetMuscle, or bodyPart to make filters extremely robust
+  if (muscleGroup) {
+    const mgRegex = new RegExp('^' + muscleGroup, 'i');
+    if (filter.$or) {
+      filter.$and = [
+        { $or: filter.$or },
+        { $or: [{ muscleGroup: mgRegex }, { targetMuscle: mgRegex }, { bodyPart: mgRegex }] }
+      ];
+      delete filter.$or;
+    } else {
+      filter.$or = [
+        { muscleGroup: mgRegex },
+        { targetMuscle: mgRegex },
+        { bodyPart: mgRegex }
+      ];
+    }
+  }
   if (equipment) filter.equipment = new RegExp('^' + equipment + '$', 'i');
   if (goalTag) filter.goalTags = new RegExp('^' + goalTag + '$', 'i');
 

@@ -89,8 +89,12 @@ export default function Generating({ onDone }) {
       <div className="gen-coach-note">
         <div className="gen-note-label">From your coach</div>
         <div className="gen-note-text">
-          You're returning, not starting over. We'll ease back in for two weeks,
-          then push. No ego lifts, no injuries — just steady progress.
+          {state.profile?.fitnessLevel === 'beginner' 
+            ? "We're starting from scratch. We'll focus on form, build a solid foundation, and safely scale up your strength."
+            : state.profile?.fitnessLevel === 'active'
+            ? "You're already active, so we'll fine-tune your routine and push your limits to maximize your gains."
+            : "You're returning, not starting over. We'll ease back in for two weeks, then push. No ego lifts, no injuries — just steady progress."
+          }
         </div>
       </div>
     </div>
