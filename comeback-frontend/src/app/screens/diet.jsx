@@ -251,6 +251,10 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
   
   const [detectedMeal, setDetectedMeal] = useState({ items: [], tip: '' });
   const [isEditing, setIsEditing] = useState(false);
+  
+  const [customMeals, setCustomMeals] = useState([]);
+  const [isAddingMeal, setIsAddingMeal] = useState(false);
+  const [newMealName, setNewMealName] = useState('');
 
   useEffect(() => {
     if (!photo) {
@@ -383,9 +387,35 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
 
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-          {['Breakfast', 'Lunch', 'Snack', 'Dinner'].map(t => (
+          {['Breakfast', 'Lunch', 'Snack', 'Dinner', ...customMeals].map(t => (
             <div key={t} className="pill" onClick={() => setMealType(t)} style={mealType === t ? { background: '#1A1A2E', borderColor: '#1A1A2E', color: '#C8F25C', fontWeight: 500 } : undefined}>{t}</div>
           ))}
+          {customMeals.length < 4 && (
+             isAddingMeal ? (
+               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                 <input 
+                   autoFocus
+                   type="text" 
+                   value={newMealName} 
+                   onChange={(e) => setNewMealName(e.target.value)} 
+                   placeholder="e.g. Mini Snack"
+                   style={{ background: '#fff', border: '1px solid #DDDDD9', borderRadius: 20, padding: '4px 12px', fontSize: 13, outline: 'none', width: 100 }}
+                 />
+                 <i className="ti ti-check" onClick={() => {
+                   if (newMealName.trim()) {
+                     setCustomMeals([...customMeals, newMealName.trim()]);
+                     setMealType(newMealName.trim());
+                   }
+                   setIsAddingMeal(false);
+                   setNewMealName('');
+                 }} style={{ cursor: 'pointer', fontSize: 18, color: '#3A7A0A' }} />
+               </div>
+             ) : (
+               <div className="pill" onClick={() => setIsAddingMeal(true)} style={{ borderStyle: 'dashed', color: '#8A8A85', borderColor: '#DDDDD9' }}>
+                 <i className="ti ti-plus" style={{ marginRight: 4 }} /> Add
+               </div>
+             )
+          )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 14 }}>
           {detectedMeal.items.map((it, idx) => (
