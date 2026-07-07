@@ -204,7 +204,8 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
   
   const [pendingOverride, setPendingOverride] = useState(null);
   const activeW = pendingOverride || w;
-  const restDay = activeW.type === 'Rest' || activeW.sessionType === 'Rest' || activeW.status === 'rest_day';
+  const isExplicitRest = activeW.type === 'Rest' || activeW.sessionType === 'Rest' || activeW.status === 'rest_day';
+  const restDay = isExplicitRest && (!activeW.exercises || activeW.exercises.length === 0);
 
   const [rows, setRows] = useState(() => (activeW.exercises || []).map(e => ({ 
     ...e, 

@@ -309,11 +309,7 @@ const completeOnboarding = asyncHandler(async (req, res) => {
 
     return res.status(500).json({
       success: false,
-<<<<<<< Updated upstream
       message: "AI API failed. Returning fallback template plan.",
-=======
-      message: "Gemini API failed. Returning fallback template plan.",
->>>>>>> Stashed changes
       weekPlan: weekPlan,
       user: user,
       coachNote: coachNote

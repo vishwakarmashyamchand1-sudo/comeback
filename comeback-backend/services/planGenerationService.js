@@ -49,12 +49,12 @@ User Profile:
     prompt += `
 Each of the 7 daily objects must match this schema:
 - 'dayName' (string: e.g., "Day 1")
-- 'sessionType' (string: e.g., "Push Day", "Rest")
+- 'sessionType' (string: e.g., "Push Day", "Active Recovery")
 - 'isRestDay' (boolean)
-- 'exercises' (array of objects, empty if rest day)
+- 'exercises' (array of objects). CRITICAL: Even if isRestDay is true, DO NOT leave this empty! You MUST generate 2-3 light mobility, stretching, or active recovery exercises (e.g. "20-minute light walk", "Cat-cow stretches", "Foam rolling").
   - 'exerciseName' (string)
   - 'muscleGroup' (string)
-  - 'sets' (array of objects: 'setNumber' (number), 'plannedReps' (number), 'plannedWeight' (number)). CRITICAL: Do NOT make every set identical! You must simulate progressive overload or warm-ups (e.g., Set 1: 15 reps @ 10kg, Set 2: 12 reps @ 15kg, Set 3: 10 reps @ 20kg). Even for bodyweight exercises or stretches where weight is 0, the reps MUST STILL DECREASE per set (e.g., 15, 12, 10) to represent progressive intensity!
+  - 'sets' (array of objects: 'setNumber' (number), 'plannedReps' (number), 'plannedWeight' (number)). For stretching/cardio, set weight to 0. Reps can be time in seconds (e.g. 60) or actual reps.
   - 'antigravityReasoning' (string)
   - 'benefits' (string)`;
 
@@ -94,7 +94,7 @@ You MUST return ONLY a valid JSON object matching this schema. Do not include ma
 {
   "summary": "String. A 2-3 sentence honest, encouraging post-workout feedback based on today's performance.",
   "tomorrow": {
-    "sessionType": "String. The name of tomorrow's workout (e.g. Pull Day, Legs, Rest)",
+    "sessionType": "String. The name of tomorrow's workout (e.g. Pull Day, Legs, Active Recovery)",
     "isRestDay": boolean,
     "exercises": [
       {
@@ -106,7 +106,7 @@ You MUST return ONLY a valid JSON object matching this schema. Do not include ma
         "antigravityReasoning": "String",
         "benefits": "String"
       }
-    ]
+    ] // CRITICAL: Even if isRestDay is true, DO NOT leave exercises empty! Generate 2-3 light mobility, stretching, or active recovery exercises (e.g. "20-minute light walk"). For these, weight is 0 and reps is time/reps.
   }
 }
 
@@ -160,6 +160,8 @@ Give a specific, practical, and highly personalized tip based on this data.`;
   } catch (error) {
     console.error("[Antigravity Error]:", error);
     return "Keep up the great work with your nutrition today!"; // Fallback tip
+  }
+};
 
 // 3. Generate Swap Muscle Plan (Called on UI Muscle Change)
 const generateSwapMusclePlan = async (contextPayload, targetMuscleGroup) => {
@@ -212,9 +214,6 @@ Generate the strict JSON response.`;
 module.exports = {
   generateWeek1Plan,
   generateTomorrowPlan,
-
-  generateDietTip
-
+  generateDietTip,
   generateSwapMusclePlan
-
 };
