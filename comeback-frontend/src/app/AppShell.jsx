@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar, TabBar } from './components.jsx';
+import { App as CapApp } from '@capacitor/app';
 import { Dashboard, WorkoutPlan, ActiveWorkout, PostSession } from './screens/workout.jsx';
 import { Diet, FoodPhoto } from './screens/diet.jsx';
 import { Coach, Progress, Circle } from './screens/social.jsx';
@@ -82,6 +83,23 @@ export default function AppShell() {
   useEffect(() => {
     fetchWorkoutByOffset(0);
   }, [state.token]);
+
+  useEffect(() => {
+    let listener = null;
+    const registerListener = async () => {
+      listener = await CapApp.addListener('backButton', () => {
+        setStack(st => {
+          if (st.length > 0) return st.slice(0, -1);
+          CapApp.exitApp();
+          return st;
+        });
+      });
+    };
+    registerListener();
+    return () => {
+      if (listener) listener.remove();
+    };
+  }, []);
 
   const dark = top === 'food';
 

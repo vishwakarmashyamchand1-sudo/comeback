@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { App as CapApp } from '@capacitor/app';
 import { useOnboarding } from './lib/store.jsx';
 import { StatusBar } from './components/UI.jsx';
 import Step1 from './screens/Step1.jsx';
@@ -98,6 +99,29 @@ export default function App({ onEnterApp }) {
      if (step === 1) return dispatch({ type: 'reset' });
   };
   const skip = () => next();
+
+  useEffect(() => {
+    let listener = null;
+    const registerListener = async () => {
+      listener = await CapApp.addListener('backButton', () => {
+        if (!state.isAuthenticated) {
+          CapApp.exitApp();
+        } else if (step === 'generating') {
+          dispatch({ type: 'back', step: 5 });
+        } else if (step > 1) {
+          dispatch({ type: 'back', step: step - 1 });
+        } else if (step === 1) {
+          CapApp.exitApp(); // Exit if they are on step 1 of onboarding
+        } else {
+          CapApp.exitApp();
+        }
+      });
+    };
+    registerListener();
+    return () => {
+      if (listener) listener.remove();
+    };
+  }, [step, dispatch]);
 
   const props = { onNext: next, onBack: back, onSkip: skip, dir };
 
