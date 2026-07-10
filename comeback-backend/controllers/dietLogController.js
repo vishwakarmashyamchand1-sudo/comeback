@@ -568,8 +568,20 @@ const analyzePhoto = asyncHandler(async (req, res) => {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'mock_key');
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+    // Use a dedicated Diet API key if provided, otherwise fallback to main key
+    const apiKey = process.env.GEMINI_DIET_API_KEY || process.env.GEMINI_API_KEY || 'mock_key';
+    const genAI = new GoogleGenerativeAI(apiKey);
+    
+    // Using 2.5-flash for better parsing and passing safety settings to avoid food photo rejections
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.5-flash",
+      safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+      ]
+    });
 
     const prompt = `You are an elite sports nutritionist. Analyze this photo of a user's ${mealType}.
 User's diet preferences: ${user.dietType || 'None'}, Restrictions: ${(user.foodRestrictions || []).join(', ')}.

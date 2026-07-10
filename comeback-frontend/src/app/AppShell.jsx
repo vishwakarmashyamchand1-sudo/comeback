@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar, TabBar } from './components.jsx';
-import { App as CapApp } from '@capacitor/app';
 import { Dashboard, WorkoutPlan, ActiveWorkout, PostSession } from './screens/workout.jsx';
 import { Diet, FoodPhoto } from './screens/diet.jsx';
 import { Coach, Progress, Circle } from './screens/social.jsx';
@@ -20,9 +19,25 @@ export default function AppShell() {
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [refreshDiet, setRefreshDiet] = useState(0);
 
-  const push = s => setStack(st => [...st, s]);
-  const pop = () => setStack(st => st.slice(0, -1));
-  const reset = () => setStack([]);
+
+  const handleTabChange = newTab => {
+    if (tab === newTab) return;
+    window.history.pushState({ tab: newTab, stack }, '', '#' + newTab);
+    setTab(newTab);
+  };
+
+  const push = s => {
+    const newStack = [...stack, s];
+    window.history.pushState({ tab, stack: newStack }, '', '#' + s);
+    setStack(newStack);
+  };
+  const pop = () => {
+    window.history.back();
+  };
+  const reset = () => {
+    window.history.pushState({ tab, stack: [] }, '', '#' + tab);
+    setStack([]);
+  };
   const top = stack[stack.length - 1];
 
   const [browserMuscle, setBrowserMuscle] = useState('All');
@@ -85,20 +100,18 @@ export default function AppShell() {
   }, [state.token]);
 
   useEffect(() => {
-    let listener = null;
-    const registerListener = async () => {
-      listener = await CapApp.addListener('backButton', () => {
-        setStack(st => {
-          if (st.length > 0) return st.slice(0, -1);
-          CapApp.exitApp();
-          return st;
-        });
-      });
+    window.history.replaceState({ tab: 'workout', stack: [] }, '', '#workout');
+
+    const handlePopState = (e) => {
+      if (e.state) {
+        if (e.state.tab) setTab(e.state.tab);
+        if (e.state.stack) setStack(e.state.stack);
+      } else {
+        setStack([]);
+      }
     };
-    registerListener();
-    return () => {
-      if (listener) listener.remove();
-    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const dark = top === 'food';
@@ -166,7 +179,7 @@ export default function AppShell() {
   return (
     <div className="app-shell" style={dark ? { background: '#1A1A2E' } : undefined}>
       {overlay || tabScreen}
-      {!overlay && <TabBar active={tab} onChange={setTab} />}
+      {!overlay && <TabBar active={tab} onChange={handleTabChange} />}
     </div>
   );
 }

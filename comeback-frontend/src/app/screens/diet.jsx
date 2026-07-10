@@ -320,8 +320,8 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
         quantityG: parseInt(it.qty) || 0,
         calories: Number(it.kcal) || 0,
         proteinG: Number(it.protein) || 0,
-        carbsG: it.carbs || 0,
-        fatG: it.fat || 0
+        carbsG: Number(it.carbs) || 0,
+        fatG: Number(it.fat) || 0
       }));
 
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/diet/log-meal`, {
@@ -433,6 +433,10 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <input type="number" value={it.kcal} onChange={(e) => handleItemChange(idx, 'kcal', e.target.value === '' ? '' : Number(e.target.value))} style={{ width: 70, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none' }} /> <span style={{ fontSize: 12, color: '#8A8A85' }}>kcal</span>
                     <input type="number" value={it.protein} onChange={(e) => handleItemChange(idx, 'protein', e.target.value === '' ? '' : Number(e.target.value))} style={{ width: 70, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none', marginLeft: 8 }} /> <span style={{ fontSize: 12, color: '#8A8A85' }}>g protein</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="number" value={it.carbs} onChange={(e) => handleItemChange(idx, 'carbs', e.target.value === '' ? '' : Number(e.target.value))} style={{ width: 70, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none' }} /> <span style={{ fontSize: 12, color: '#8A8A85' }}>g carbs</span>
+                    <input type="number" value={it.fat} onChange={(e) => handleItemChange(idx, 'fat', e.target.value === '' ? '' : Number(e.target.value))} style={{ width: 70, background: '#F5F5F3', border: 'none', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A1A2E', outline: 'none', marginLeft: 8 }} /> <span style={{ fontSize: 12, color: '#8A8A85' }}>g fat</span>
                   </div>
                 </div>
               ) : (

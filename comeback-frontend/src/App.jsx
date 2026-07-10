@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { App as CapApp } from '@capacitor/app';
 import { useOnboarding } from './lib/store.jsx';
 import { StatusBar } from './components/UI.jsx';
 import Step1 from './screens/Step1.jsx';
@@ -24,7 +23,10 @@ export default function App({ onEnterApp }) {
   const { step, dir } = state;
   const [done, setDone] = useState(false);
 
-  const go = next => dispatch({ type: next > step ? 'next' : 'back', step: next });
+  const go = nextStep => {
+    window.history.pushState({ step: nextStep }, '');
+    dispatch({ type: nextStep > step ? 'next' : 'back', step: nextStep });
+  };
   
   const next = async () => {
     const slices = { 1: 'profile', 2: 'background', 3: 'goal', 4: 'diet', 5: 'health' };
@@ -94,33 +96,23 @@ export default function App({ onEnterApp }) {
     step < 5 ? go(step + 1) : dispatch({ type: 'next', step: 'generating' });
   };
   const back = () => {
-    if (step === 'generating') return dispatch({ type: 'back', step: 5 });
-    if (step > 1) go(step - 1);
-     if (step === 1) return dispatch({ type: 'reset' });
+    window.history.back();
   };
+
   const skip = () => next();
 
   useEffect(() => {
-    let listener = null;
-    const registerListener = async () => {
-      listener = await CapApp.addListener('backButton', () => {
-        if (!state.isAuthenticated) {
-          CapApp.exitApp();
-        } else if (step === 'generating') {
-          dispatch({ type: 'back', step: 5 });
-        } else if (step > 1) {
-          dispatch({ type: 'back', step: step - 1 });
-        } else if (step === 1) {
-          CapApp.exitApp(); // Exit if they are on step 1 of onboarding
-        } else {
-          CapApp.exitApp();
-        }
-      });
+    const handlePopState = () => {
+      if (step === 'generating') {
+        dispatch({ type: 'back', step: 5 });
+      } else if (step > 1) {
+        dispatch({ type: 'back', step: step - 1 });
+      } else if (step === 1) {
+        dispatch({ type: 'reset' });
+      }
     };
-    registerListener();
-    return () => {
-      if (listener) listener.remove();
-    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, [step, dispatch]);
 
   const props = { onNext: next, onBack: back, onSkip: skip, dir };
