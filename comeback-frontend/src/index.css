@@ -415,8 +415,8 @@ input[type="date"] {
 .fab-lbl { font-size: 10px; font-weight: 500; color: var(--c-navy); background: #ffffffcc; padding: 2px 8px; border-radius: 20px; }
 
 /* bottom sheet */
-.sheet-scrim { position: absolute; inset: 0; background: #1A1A2E66; z-index: 20; display: flex; flex-direction: column; justify-content: flex-end; }
-.sheet { background: var(--c-bg); border-radius: 28px 28px 0 0; max-height: 82%; display: flex; flex-direction: column; animation: sheetUp .28s cubic-bezier(.4,0,.2,1); }
+.sheet-scrim { position: fixed; inset: 0; background: #1A1A2E66; z-index: 20; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.sheet { width: 100%; max-width: 430px; background: var(--c-bg); border-radius: 28px 28px 0 0; max-height: 82%; display: flex; flex-direction: column; animation: sheetUp .28s cubic-bezier(.4,0,.2,1); }
 @keyframes sheetUp { from { transform: translateY(30px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
 .sheet-grab { width: 40px; height: 4px; border-radius: 2px; background: var(--c-border); margin: 14px auto 16px; }
 

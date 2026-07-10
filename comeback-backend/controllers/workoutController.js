@@ -714,6 +714,75 @@ const swapMuscle = asyncHandler(async (req, res) => {
           recoveryWarning: recoveryWarning
         });
       }
+
+      // If we don't have an existing workout to clone, use the robust skeleton fallback
+      const skeletons = {
+        'Push': ['Bench Press', 'Overhead Press', 'Triceps Pushdown'],
+        'Pull': ['Barbell Row', 'Lat Pulldown', 'Bicep Curl'],
+        'Legs': ['Squat', 'Leg Press', 'Calf Raise'],
+        'Upper': ['Bench Press', 'Barbell Row', 'Overhead Press'],
+        'Lower': ['Squat', 'Romanian Deadlift', 'Leg Curl'],
+        'Full Body': ['Squat', 'Bench Press', 'Barbell Row']
+      };
+
+      const defaultSets = [
+        { setNumber: 1, plannedReps: 15, plannedWeight: 5 },
+        { setNumber: 2, plannedReps: 12, plannedWeight: 10 },
+        { setNumber: 3, plannedReps: 10, plannedWeight: 15 }
+      ];
+
+      // Find the closest matching skeleton category
+      const skeletonKey = Object.keys(skeletons).find(key => 
+        muscleGroup.toLowerCase().includes(key.toLowerCase()) || 
+        key.toLowerCase().includes(muscleGroup.toLowerCase())
+      ) || 'Full Body'; // Default to Full Body if no match
+
+      if (skeletons[skeletonKey]) {
+        let finalExercises = [];
+        for (const exName of skeletons[skeletonKey]) {
+          let dbEx = await Exercise.findOne({ name: new RegExp('^' + exName + '$', 'i') });
+          if (!dbEx) {
+            const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const words = exName.split(' ').filter(w => w.length > 2).map(escapeRegExp);
+            if (words.length > 0) {
+              const regexQuery = words.map(w => ({ name: new RegExp(w, 'i') }));
+              dbEx = await Exercise.findOne({ $and: regexQuery });
+            }
+            if (!dbEx && words.length > 0) {
+              dbEx = await Exercise.findOne({ name: new RegExp(words[words.length - 1], 'i') });
+            }
+            if (!dbEx) {
+              dbEx = await Exercise.findOne();
+            }
+          }
+          
+          if (dbEx) {
+            finalExercises.push({
+              exerciseName: dbEx.name,
+              exerciseId: dbEx._id,
+              muscleGroup: dbEx.targetMuscle || muscleGroup,
+              sets: defaultSets,
+              addedByUser: false
+            });
+          }
+        }
+        
+        if (finalExercises.length > 0) {
+          const previewPlan = {
+            _id: "PREVIEW_ONLY_NOT_SAVED_YET",
+            sessionType: muscleGroup,
+            status: "planned",
+            planSource: "muscle_swap",
+            exercises: finalExercises
+          };
+          
+          return res.status(200).json({
+            newPlan: previewPlan,
+            recoveryWarning: recoveryWarning
+          });
+        }
+      }
+
     } catch (fallbackError) {
       console.error("Fallback query also failed:", fallbackError);
     }

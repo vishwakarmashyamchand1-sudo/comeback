@@ -240,7 +240,7 @@ const completeOnboarding = asyncHandler(async (req, res) => {
       2: ['Full Body', 'Rest', 'Rest', 'Full Body', 'Rest', 'Rest', 'Rest'],
       3: ['Push', 'Rest', 'Pull', 'Rest', 'Legs', 'Rest', 'Rest'],
       4: ['Upper', 'Lower', 'Rest', 'Upper', 'Lower', 'Rest', 'Rest'],
-      5: ['Push', 'Pull', 'Legs', 'Upper', 'Lower', 'Rest', 'Rest'],
+      5: ['Push', 'Pull', 'Legs', 'Rest', 'Upper', 'Lower', 'Rest'],
       6: ['Push', 'Pull', 'Legs', 'Push', 'Pull', 'Legs', 'Rest']
     };
     
@@ -276,7 +276,21 @@ const completeOnboarding = asyncHandler(async (req, res) => {
       let finalExercises = [];
       if (!isRestDay && skeletons[sessionType]) {
         for (const exName of skeletons[sessionType]) {
-          const dbEx = await Exercise.findOne({ name: new RegExp('^' + exName, 'i') });
+          let dbEx = await Exercise.findOne({ name: new RegExp('^' + exName + '$', 'i') });
+          if (!dbEx) {
+            const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const words = exName.split(' ').filter(w => w.length > 2).map(escapeRegExp);
+            if (words.length > 0) {
+              const regexQuery = words.map(w => ({ name: new RegExp(w, 'i') }));
+              dbEx = await Exercise.findOne({ $and: regexQuery });
+            }
+            if (!dbEx && words.length > 0) {
+              dbEx = await Exercise.findOne({ name: new RegExp(words[words.length - 1], 'i') });
+            }
+            if (!dbEx) {
+              dbEx = await Exercise.findOne();
+            }
+          }
           if (dbEx) {
             finalExercises.push({
               exerciseName: dbEx.name,

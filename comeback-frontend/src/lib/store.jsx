@@ -56,7 +56,13 @@ function reducer(state, action) {
       };
     case 'next':  return { ...state, step: action.step, dir: 'fwd' };
     case 'back':  return { ...state, step: action.step, dir: 'back' };
-    case 'reset': return { ...initial };
+    case 'reset': 
+      return { 
+        ...initial, 
+        isAuthenticated: state.isAuthenticated, 
+        token: state.token,
+        profile: { ...initial.profile, name: state.profile?.name }
+      };
     case 'logout': 
       try { 
         localStorage.removeItem(STORAGE_KEY); 

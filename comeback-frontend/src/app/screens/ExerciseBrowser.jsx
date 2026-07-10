@@ -159,6 +159,7 @@ export function ExerciseBrowser({ onClose, onAdd, initialFilter = 'All' }) {
                 onPointerUp={(evt) => clearTimeout(evt.currentTarget.dataset.timer)}
                 onPointerCancel={(evt) => clearTimeout(evt.currentTarget.dataset.timer)}
                 onPointerLeave={(evt) => clearTimeout(evt.currentTarget.dataset.timer)}
+                onPointerMove={(evt) => clearTimeout(evt.currentTarget.dataset.timer)}
               >
                 {e.gifUrl ? (
                   <img src={e.gifUrl} alt={exerciseName} style={{ width: '100%', aspectRatio: '1', height: 'auto', borderRadius: 10, marginBottom: 9, objectFit: 'cover', pointerEvents: 'none' }} />
