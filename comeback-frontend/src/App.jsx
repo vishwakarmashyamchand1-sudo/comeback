@@ -115,21 +115,23 @@ export default function App({ onEnterApp }) {
     window.addEventListener('popstate', handlePopState);
 
     let capListener = null;
-    const registerCapListener = async () => {
-      capListener = await CapApp.addListener('backButton', () => {
-        if (!state.isAuthenticated) {
-          CapApp.exitApp();
-        } else {
-          const hash = window.location.hash;
-          if (hash === '#step1' || hash === '') {
+    if (step !== 'dashboard') {
+      const registerCapListener = async () => {
+        capListener = await CapApp.addListener('backButton', () => {
+          if (!state.isAuthenticated) {
             CapApp.exitApp();
           } else {
-            window.history.back();
+            const hash = window.location.hash;
+            if (hash === '#step1' || hash === '') {
+              CapApp.exitApp();
+            } else {
+              window.history.back();
+            }
           }
-        }
-      });
-    };
-    registerCapListener();
+        });
+      };
+      registerCapListener();
+    }
 
     return () => {
       window.removeEventListener('popstate', handlePopState);

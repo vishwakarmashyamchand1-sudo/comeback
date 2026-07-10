@@ -39,6 +39,10 @@ export default function AppShell() {
     window.history.pushState({ tab, stack: [] }, '', '#' + tab);
     setStack([]);
   };
+  const replace = s => {
+    window.history.replaceState({ tab, stack: [s] }, '', '#' + s);
+    setStack([s]);
+  };
   const top = stack[stack.length - 1];
 
   const [browserMuscle, setBrowserMuscle] = useState('All');
@@ -162,7 +166,7 @@ export default function AppShell() {
   };
 
   let overlay = null;
-  if (top === 'plan') overlay = <WorkoutPlan workout={workout} weeklyPlanSplit={weeklyPlanSplit} onBack={pop} onStart={() => setStack(['active'])} onAddExercise={() => { setBrowserMuscle('All'); push('browser'); }} refreshWorkout={() => fetchWorkoutByOffset(0)} />;
+  if (top === 'plan') overlay = <WorkoutPlan workout={workout} weeklyPlanSplit={weeklyPlanSplit} onBack={pop} onStart={() => replace('active')} onAddExercise={() => { setBrowserMuscle('All'); push('browser'); }} refreshWorkout={() => fetchWorkoutByOffset(0)} />;
   if (top === 'modify_plan') overlay = <WorkoutPlan 
     workout={workout} 
     weeklyPlanSplit={weeklyPlanSplit} 
@@ -172,7 +176,7 @@ export default function AppShell() {
     refreshWorkout={() => fetchWorkoutByOffset(1)} 
     isModifyMode={true} 
   />;
-  if (top === 'active') overlay = <ActiveWorkout workout={workout} onBack={pop} onFinish={() => setStack(['post'])} onSwap={(muscle) => { setBrowserMuscle(muscle || 'All'); push('browser'); }} />;
+  if (top === 'active') overlay = <ActiveWorkout workout={workout} onBack={pop} onFinish={() => replace('post')} onSwap={(muscle) => { setBrowserMuscle(muscle || 'All'); push('browser'); }} />;
   if (top === 'post') overlay = <PostSession 
     workout={workout} 
     onDone={() => { setWorkoutDone(true); reset(); fetchWorkoutByOffset(0); }} 
@@ -189,7 +193,7 @@ export default function AppShell() {
   if (top === 'profile') overlay = <Profile onBack={pop} />;
 
   let tabScreen;
-  if (tab === 'workout') tabScreen = <Dashboard workout={workout} weeklyPlanSplit={weeklyPlanSplit} done={workoutDone} onStart={() => push('plan')} onViewSummary={() => setStack(['post'])} onOpenCircle={() => push('circle')} goDiet={() => setTab('diet')} onOpenProfile={() => push('profile')} onChangeDay={() => push('plan')} onFocusChange={fetchWorkoutByOffset} />;
+  if (tab === 'workout') tabScreen = <Dashboard workout={workout} weeklyPlanSplit={weeklyPlanSplit} done={workoutDone} onStart={() => push('plan')} onViewSummary={() => replace('post')} onOpenCircle={() => push('circle')} goDiet={() => handleTabChange('diet')} onOpenProfile={() => push('profile')} onChangeDay={() => push('plan')} onFocusChange={fetchWorkoutByOffset} />;
   if (tab === 'diet') tabScreen = <Diet key={refreshDiet} onLogMeal={(photoData) => { setCapturedPhoto(photoData); push('food'); }} />;
   if (tab === 'coach') tabScreen = <Coach />;
   if (tab === 'progress') tabScreen = <Progress />;
