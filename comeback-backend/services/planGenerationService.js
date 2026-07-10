@@ -49,14 +49,15 @@ User Profile:
     prompt += `
 Each of the 7 daily objects must match this schema:
 - 'dayName' (string: e.g., "Day 1")
-- 'sessionType' (string: e.g., "Push Day", "Active Recovery")
+- 'sessionType' (string: e.g., "Push Day", "Rest")
 - 'isRestDay' (boolean)
-- 'exercises' (array of objects). CRITICAL: Even if isRestDay is true, DO NOT leave this empty! You MUST generate 2-3 light mobility, stretching, or active recovery exercises (e.g. "20-minute light walk", "Cat-cow stretches", "Foam rolling").
-  - 'exerciseName' (string)
-  - 'muscleGroup' (string)
-  - 'sets' (array of objects: 'setNumber' (number), 'plannedReps' (number), 'plannedWeight' (number)). For stretching/cardio, set weight to 0. Reps can be time in seconds (e.g. 60) or actual reps.
-  - 'antigravityReasoning' (string)
-  - 'benefits' (string)`;
+- 'exercises' (array of objects). CRITICAL INSTRUCTION: You MUST generate EXACTLY ${user.daysPerWeek || 5} workout days with a populated 'exercises' array. For the remaining (7 - ${user.daysPerWeek || 5}) days, 'sessionType' MUST be "Rest", 'isRestDay' MUST be true, and 'exercises' MUST be an empty array []. DO NOT generate stretching, mobility, or any exercises on Rest days!
+  - If it is a workout day, 'exercises' must contain:
+    - 'exerciseName' (string)
+    - 'muscleGroup' (string)
+    - 'sets' (array of objects: 'setNumber' (number), 'plannedReps' (number), 'plannedWeight' (number))
+    - 'antigravityReasoning' (string)
+    - 'benefits' (string)`;
 
     const result = await model.generateContent(prompt);
     const responseText = result.response.text().trim();
@@ -101,12 +102,16 @@ You MUST return ONLY a valid JSON object matching this schema. Do not include ma
         "exerciseName": "String",
         "muscleGroup": "String",
         "sets": [
-          { "setNumber": 1, "plannedReps": 10, "plannedWeight": 20 }
+          {
+            "setNumber": number,
+            "plannedReps": number,
+            "plannedWeight": number
+          }
         ],
         "antigravityReasoning": "String",
         "benefits": "String"
       }
-    ] // CRITICAL: Even if isRestDay is true, DO NOT leave exercises empty! Generate 2-3 light mobility, stretching, or active recovery exercises (e.g. "20-minute light walk"). For these, weight is 0 and reps is time/reps.
+    ] (CRITICAL INSTRUCTION: If isRestDay is true, 'exercises' MUST be an empty array []. Do not generate stretching, mobility, or any exercises on Rest days!)
   }
 }
 

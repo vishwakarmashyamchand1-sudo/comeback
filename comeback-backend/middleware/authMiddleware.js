@@ -16,12 +16,18 @@ const protect = asyncHandler(async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
 
       let user;
+      let decodedTokenUid = null;
+      let decodedTokenEmail = null;
+      let decodedTokenName = null;
 
       // 2. Verify token with Firebase Admin
       if (adminAuth) {
         const decodedToken = await adminAuth.verifyIdToken(token);
+        decodedTokenUid = decodedToken.uid;
+        decodedTokenEmail = decodedToken.email;
+        decodedTokenName = decodedToken.name;
         // 3. Find user in database by firebaseUid
-        user = await User.findOne({ firebaseUid: decodedToken.uid });
+        user = await User.findOne({ firebaseUid: decodedTokenUid });
       } else {
         // Fallback for local development if serviceAccountKey.json is missing
         console.warn("⚠️ Warning: Bypassing Firebase auth check because adminAuth is not initialized.");
@@ -32,13 +38,24 @@ const protect = asyncHandler(async (req, res, next) => {
         }
       }
 
+      if (!user && adminAuth) {
+        // If user isn't found, it might be a new registration in progress. 
+        // Wait 500ms and check again to allow /register to finish first!
+        await new Promise(resolve => setTimeout(resolve, 500));
+        user = await User.findOne({ firebaseUid: decodedTokenUid });
+      }
+
       if (user) {
         req.user = user;
         return next();
       } else {
         // If the token is valid but user isn't in DB yet (e.g. during registration)
         // Attach the uid so the controller can use it
-        req.user = { firebaseUid: decodedToken.uid };
+        req.user = { 
+          firebaseUid: decodedTokenUid,
+          email: decodedTokenEmail,
+          name: decodedTokenName
+        };
         return next();
       }
     } catch (error) {

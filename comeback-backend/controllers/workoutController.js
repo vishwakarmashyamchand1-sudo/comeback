@@ -731,7 +731,7 @@ const confirmPlan = asyncHandler(async (req, res) => {
   const User = require('../models/User');
   const Workout = require('../models/Workout');
 
-  // Read exactly what the Sir requested from the frontend
+  // Read exactly what the  requested from the frontend
   const { exercises, planSource } = req.body;
 
   if (!exercises || !planSource) {

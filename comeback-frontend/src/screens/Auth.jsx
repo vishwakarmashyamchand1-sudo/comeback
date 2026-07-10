@@ -20,7 +20,7 @@ export default function Auth() {
   const valid = isLogin ? (email && password.length >= 6) : (name && email && password.length >= 6);
 
   const handleSubmit = async () => {
-    if (!valid) return;
+    if (!valid || loading) return;
     setLoading(true);
     setError('');
 

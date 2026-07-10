@@ -36,12 +36,28 @@ const createUser = asyncHandler(async (req, res) => {
   }
 
   // 3. If no — create a new User document with the provided fields. Set onboardingComplete: false.
-  const user = await User.create({
-    name,
-    email,
-    firebaseUid,
-    onboardingComplete: false
-  });
+  let user;
+  try {
+    user = await User.create({
+      name,
+      email,
+      firebaseUid,
+      onboardingComplete: false
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      console.warn("Race condition during register, user already exists. Fetching...");
+      user = await User.findOne({ firebaseUid }) || await User.findOne({ email });
+      // If /me auto-created the user first, it used the fallback name "Athlete".
+      // We need to update it with their real name from the registration form!
+      if (user && name && (!user.name || user.name === 'Athlete')) {
+        user.name = name;
+        await user.save();
+      }
+    } else {
+      throw err;
+    }
+  }
 
   if (user) {
     // 4. Return the new user object and isNewUser: true.
@@ -64,12 +80,41 @@ const createUser = asyncHandler(async (req, res) => {
  */
 const getUserProfile = asyncHandler(async (req, res) => {
   // 1. The protect middleware already fetched the user from MongoDB!
-  const user = req.user;
+  let user = req.user;
 
   // 2. If the middleware only found a Firebase token but no MongoDB record
   if (!user || !user._id) {
-    res.status(404);
-    throw new Error('Firebase user exists but no MongoDB record — prompt re-registration');
+    console.warn("Firebase user exists but no MongoDB record. Auto-creating record...");
+    if (!user.firebaseUid) {
+      res.status(401);
+      throw new Error("Invalid token data. Missing firebaseUid.");
+    }
+    
+    const existingEmailUser = await User.findOne({ email: user.email });
+
+    if (existingEmailUser) {
+      console.warn("Email already exists in MongoDB. Updating firebaseUid to link accounts...");
+      existingEmailUser.firebaseUid = user.firebaseUid;
+      await existingEmailUser.save();
+      user = existingEmailUser;
+    } else {
+      // Auto-create the MongoDB user to recover from the inconsistent state
+      try {
+        user = await User.create({
+          name: user.name || "Athlete",
+          email: user.email || `${user.firebaseUid}@fallback.comeback.app`,
+          firebaseUid: user.firebaseUid,
+          onboardingComplete: false
+        });
+      } catch (err) {
+        if (err.code === 11000) {
+          console.warn("Race condition during auto-create, user already exists. Fetching...");
+          user = await User.findOne({ firebaseUid: user.firebaseUid }) || await User.findOne({ email: user.email });
+        } else {
+          throw err;
+        }
+      }
+    }
   }
 
   // 3. Return full user object!
