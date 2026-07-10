@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar, TabBar } from './components.jsx';
+import { App as CapApp } from '@capacitor/app';
 import { Dashboard, WorkoutPlan, ActiveWorkout, PostSession } from './screens/workout.jsx';
 import { Diet, FoodPhoto } from './screens/diet.jsx';
 import { Coach, Progress, Circle } from './screens/social.jsx';
@@ -111,7 +112,24 @@ export default function AppShell() {
       }
     };
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+
+    let capListener = null;
+    const registerCapListener = async () => {
+      capListener = await CapApp.addListener('backButton', () => {
+        const hash = window.location.hash;
+        if (hash === '#workout' || hash === '') {
+          CapApp.exitApp();
+        } else {
+          window.history.back();
+        }
+      });
+    };
+    registerCapListener();
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (capListener) capListener.remove();
+    };
   }, []);
 
   const dark = top === 'food';

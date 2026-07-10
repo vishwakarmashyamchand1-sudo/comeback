@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { App as CapApp } from '@capacitor/app';
 import { useOnboarding } from './lib/store.jsx';
 import { StatusBar } from './components/UI.jsx';
 import Step1 from './screens/Step1.jsx';
@@ -112,8 +113,29 @@ export default function App({ onEnterApp }) {
       }
     };
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [step, dispatch]);
+
+    let capListener = null;
+    const registerCapListener = async () => {
+      capListener = await CapApp.addListener('backButton', () => {
+        if (!state.isAuthenticated) {
+          CapApp.exitApp();
+        } else {
+          const hash = window.location.hash;
+          if (hash === '#step1' || hash === '') {
+            CapApp.exitApp();
+          } else {
+            window.history.back();
+          }
+        }
+      });
+    };
+    registerCapListener();
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (capListener) capListener.remove();
+    };
+  }, [step, dispatch, state.isAuthenticated]);
 
   const props = { onNext: next, onBack: back, onSkip: skip, dir };
 
