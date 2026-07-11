@@ -187,7 +187,8 @@ const generateDailyNutritionTipAsync = async (userId, dietLogId) => {
       waterGlasses: dietLog.waterGlasses
     };
 
-    const newTip = await generateDietTip(dietLog.meals || [], runningTotals, avgProtein);
+    // const newTip = await generateDietTip(dietLog.meals || [], runningTotals, avgProtein);
+    const newTip = "Stay consistent with your meals! Keep tracking your progress to reach your goals.";
     dietLog.dailyCoachTip = newTip;
     dietLog.dailyTipGeneratedAt = new Date();
     await dietLog.save();
@@ -514,7 +515,8 @@ const getDietTip = asyncHandler(async (req, res) => {
 
   // Step 95: Call API to generate a new tip
   const { generateDietTip } = require('../services/planGenerationService');
-  const newTip = await generateDietTip(dietLog.meals || [], runningTotals, avgProtein);
+  // const newTip = await generateDietTip(dietLog.meals || [], runningTotals, avgProtein);
+  const newTip = "Stay consistent with your meals! Keep tracking your progress to reach your goals.";
   const generationTime = new Date();
 
   dietLog.dailyCoachTip = newTip;
