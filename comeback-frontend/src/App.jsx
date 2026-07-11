@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { App as CapApp } from '@capacitor/app';
+import { StatusBar as CapStatusBar, Style } from '@capacitor/status-bar';
 import { useOnboarding } from './lib/store.jsx';
 import { StatusBar } from './components/UI.jsx';
 import Step1 from './screens/Step1.jsx';
@@ -15,6 +16,10 @@ import { API_URL } from './lib/api.js';
 export default function App({ onEnterApp }) {
   const { state, dispatch } = useOnboarding();
     React.useEffect(() => {
+      CapStatusBar.setStyle({ style: Style.Light }).catch(() => {});
+    }, []);
+
+    React.useEffect(() => {
     // Wait until they are authenticated before jumping!
     if (state.isAuthenticated && localStorage.getItem('hasCompletedOnboarding') === 'true') {
       if (onEnterApp) onEnterApp();
@@ -22,6 +27,12 @@ export default function App({ onEnterApp }) {
     }
   }, [state.isAuthenticated, dispatch, onEnterApp]);
   const { step, dir } = state;
+  const stateRef = useRef({ step, isAuthenticated: state.isAuthenticated });
+  
+  useEffect(() => {
+    stateRef.current = { step, isAuthenticated: state.isAuthenticated };
+  }, [step, state.isAuthenticated]);
+
   const [done, setDone] = useState(false);
 
   const go = nextStep => {
@@ -114,28 +125,47 @@ export default function App({ onEnterApp }) {
     };
     window.addEventListener('popstate', handlePopState);
 
-    let capListener = null;
+    const handleManualHardwarePopApp = () => {
+      const currentStep = stateRef.current.step;
+      if (currentStep === 'generating') {
+        dispatch({ type: 'back', step: 5 });
+      } else if (currentStep > 1) {
+        dispatch({ type: 'back', step: currentStep - 1 });
+      } else if (currentStep === 1) {
+        dispatch({ type: 'reset' });
+      }
+    };
+    window.addEventListener('manualHardwarePopApp', handleManualHardwarePopApp);
+
+    let isMounted = true;
+    let capListenerHandle = null;
+
     if (step !== 'dashboard') {
-      const registerCapListener = async () => {
-        capListener = await CapApp.addListener('backButton', () => {
-          if (!state.isAuthenticated) {
+      CapApp.addListener('backButton', () => {
+        const currentRef = stateRef.current;
+        if (!currentRef.isAuthenticated) {
+          CapApp.exitApp();
+        } else {
+          if (currentRef.step === 1 || currentRef.step === 'dashboard') {
             CapApp.exitApp();
           } else {
-            const hash = window.location.hash;
-            if (hash === '#step1' || hash === '') {
-              CapApp.exitApp();
-            } else {
-              window.history.back();
-            }
+            window.dispatchEvent(new CustomEvent('manualHardwarePopApp'));
           }
-        });
-      };
-      registerCapListener();
+        }
+      }).then(handle => {
+        if (!isMounted) {
+          handle.remove();
+        } else {
+          capListenerHandle = handle;
+        }
+      });
     }
 
     return () => {
+      isMounted = false;
       window.removeEventListener('popstate', handlePopState);
-      if (capListener) capListener.remove();
+      window.removeEventListener('manualHardwarePopApp', handleManualHardwarePopApp);
+      if (capListenerHandle) capListenerHandle.remove();
     };
   }, [step, dispatch, state.isAuthenticated]);
 

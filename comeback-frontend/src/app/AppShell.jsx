@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar, TabBar } from './components.jsx';
 import { App as CapApp } from '@capacitor/app';
 import { Dashboard, WorkoutPlan, ActiveWorkout, PostSession } from './screens/workout.jsx';
@@ -13,6 +13,12 @@ export default function AppShell() {
   const { state } = useOnboarding();
   const [tab, setTab] = useState('workout');
   const [stack, setStack] = useState([]);
+  const stateRef = useRef({ tab, stack });
+  
+  useEffect(() => {
+    stateRef.current = { tab, stack };
+  }, [tab, stack]);
+
   const [workoutDone, setWorkoutDone] = useState(false);
   const [workout, setWorkout] = useState(null);
   const [weeklyPlanSplit, setWeeklyPlanSplit] = useState([]);
@@ -33,7 +39,16 @@ export default function AppShell() {
     setStack(newStack);
   };
   const pop = () => {
-    window.history.back();
+    setStack(prevStack => {
+      if (prevStack.length > 0) {
+        const newStack = prevStack.slice(0, -1);
+        const currentTab = stateRef.current ? stateRef.current.tab : tab;
+        const prevPage = newStack.length > 0 ? newStack[newStack.length - 1] : currentTab;
+        window.history.replaceState({ tab: currentTab, stack: newStack }, '', '#' + prevPage);
+        return newStack;
+      }
+      return prevStack;
+    });
   };
   const reset = () => {
     window.history.pushState({ tab, stack: [] }, '', '#' + tab);
@@ -117,22 +132,43 @@ export default function AppShell() {
     };
     window.addEventListener('popstate', handlePopState);
 
-    let capListener = null;
-    const registerCapListener = async () => {
-      capListener = await CapApp.addListener('backButton', () => {
-        const hash = window.location.hash;
-        if (hash === '#workout' || hash === '') {
-          CapApp.exitApp();
-        } else {
-          window.history.back();
+    const handleManualHardwarePop = () => {
+      setStack(prevStack => {
+        if (prevStack.length > 0) {
+          const newStack = prevStack.slice(0, -1);
+          const currentTab = stateRef.current.tab;
+          const prevPage = newStack.length > 0 ? newStack[newStack.length - 1] : currentTab;
+          window.history.replaceState({ tab: currentTab, stack: newStack }, '', '#' + prevPage);
+          return newStack;
         }
+        return prevStack;
       });
     };
-    registerCapListener();
+    window.addEventListener('manualHardwarePop', handleManualHardwarePop);
+
+    let isMounted = true;
+    let capListenerHandle = null;
+
+    CapApp.addListener('backButton', () => {
+      const { stack } = stateRef.current;
+      if (stack.length === 0) {
+        CapApp.exitApp();
+      } else {
+        window.dispatchEvent(new CustomEvent('manualHardwarePop'));
+      }
+    }).then(handle => {
+      if (!isMounted) {
+        handle.remove();
+      } else {
+        capListenerHandle = handle;
+      }
+    });
 
     return () => {
+      isMounted = false;
       window.removeEventListener('popstate', handlePopState);
-      if (capListener) capListener.remove();
+      window.removeEventListener('manualHardwarePop', handleManualHardwarePop);
+      if (capListenerHandle) capListenerHandle.remove();
     };
   }, []);
 
