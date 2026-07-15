@@ -1,0 +1,12 @@
+{
+  "name": "comeback-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix comeback-backend && npm install --prefix comeback-frontend",
+    "dev": "concurrently \"npm run dev --prefix comeback-backend\" \"npm run dev --prefix comeback-frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
