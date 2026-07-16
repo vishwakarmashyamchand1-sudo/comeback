@@ -181,7 +181,7 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
 
         {/* coach */}
         <div style={{ marginBottom: 14 }}>
-          <CoachCard>{workoutData?.workout?.aiSummary || dietData?.dietLog?.dailyCoachTip || "Day 2 of your comeback. Ease in today — hit the planned weights, don't chase PRs yet."}</CoachCard>
+          <CoachCard>{w?.aiSummary || dietData?.dietLog?.dailyCoachTip || "Day 2 of your comeback. Ease in today — hit the planned weights, don't chase PRs yet."}</CoachCard>
         </div>
 
         {/* circle */}
@@ -268,6 +268,43 @@ function Metric({ label, val, target, value, max }) {
 }
 
 /* ─────────────────────────── WORKOUT PLAN ────────────────── */
+
+const warmupExercises = [
+  { name: 'Astride Jumps (Male)', gifFile: '3220-f9lVSSI.gif' },
+  { name: 'Back and Forth Step', gifFile: '3672-fNGumX0.gif' },
+  { name: 'Bear Crawl', gifFile: '3360-0Yz8WdV.gif' },
+  { name: 'Burpee', gifFile: '1160-dK9394r.gif' },
+  { name: 'Cycle Cross Trainer', gifFile: '2331-XSCHmiI.gif' }
+];
+
+const cooldownExercises = [
+  { name: 'All Fours Squad Stretch', gifFile: '1512-qBcKorM.gif' },
+  { name: 'Assisted Lying Calves Stretch', gifFile: '1708-GxDwDX0.gif' },
+  { name: 'Assisted Lying Glutes Stretch', gifFile: '1709-yn0LjwL.gif' },
+  { name: 'Assisted Lying Gluteus and Piriformis Stretch', gifFile: '1710-RQNVT10.gif' },
+  { name: 'Assisted Prone Lying Quads Stretch', gifFile: '1713-YUYAMEj.gif' }
+];
+
+function ExtraExercisesSheet({ title, exercises, onClose }) {
+  return (
+    <Sheet onClose={onClose} maxHeight="80%">
+      <div style={{ padding: '0 20px 20px' }}>
+        <h3 style={{ fontSize: 18, color: 'var(--c-navy)', marginBottom: 16 }}>{title}</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {exercises.map((ex, i) => (
+            <div key={i} className="card" style={{ padding: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', flex: 'none', background: '#F5F5F3' }}>
+                <img src={`https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/${ex.gifFile}`} alt={ex.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-navy)' }}>{ex.name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
 export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinish, onAddExercise, onSubstituteBrowse, refreshWorkout, isModifyMode }) {
   const { state } = useOnboarding();
   const w = workout || todayWorkout;
@@ -287,6 +324,8 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinis
   })));
   const [pickerFor, setPickerFor] = useState(null); // exercise id being substituted
   const [dayOpen, setDayOpen] = useState(false);
+  const [showWarmup, setShowWarmup] = useState(false);
+  const [showCooldown, setShowCooldown] = useState(false);
   const [historyData, setHistoryData] = useState(null);
   const [dayType, setDayType] = useState(activeW.sessionType || activeW.type || 'Full Body');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -508,10 +547,18 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinis
     <div className="app-body">
       <PushHeader title={isModifyMode ? "Tomorrow's plan" : "Today's workout"} onBack={onBack} right="ti-calendar" onRight={fetchHistory} />
       <div className="screen-pad scroll" style={{ paddingTop: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span className="badge green"><i className="ti ti-barbell" /> {dayType}</span>
-          <div onClick={() => setDayOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#fff', border: '1px solid #DDDDD9', borderRadius: 20, padding: '5px 11px', cursor: 'pointer' }}>
-            <i className="ti ti-repeat" style={{ fontSize: 13, color: '#1A1A2E' }} /><span style={{ fontSize: 11, fontWeight: 500, color: '#1A1A2E' }}>Change day</span>
+        <div className="hide-scroll" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
+          <span className="badge green" style={{ flex: 'none' }}><i className="ti ti-barbell" /> {dayType}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'nowrap', flex: 'none' }}>
+            <div onClick={() => setShowWarmup(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#fff', border: '1px solid #DDDDD9', borderRadius: 20, padding: '4px 8px', cursor: 'pointer', flex: 'none' }}>
+              <i className="ti ti-flame" style={{ color: '#D97706', fontSize: 13 }} /><span style={{ fontSize: 11, fontWeight: 500, color: '#1A1A2E', whiteSpace: 'nowrap' }}>Warm-up</span>
+            </div>
+            <div onClick={() => setShowCooldown(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#fff', border: '1px solid #DDDDD9', borderRadius: 20, padding: '4px 8px', cursor: 'pointer', flex: 'none' }}>
+              <i className="ti ti-snowflake" style={{ color: '#0369A1', fontSize: 13 }} /><span style={{ fontSize: 11, fontWeight: 500, color: '#1A1A2E', whiteSpace: 'nowrap' }}>Cool-down</span>
+            </div>
+            <div onClick={() => setDayOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#fff', border: '1px solid #DDDDD9', borderRadius: 20, padding: '4px 8px', cursor: 'pointer', flex: 'none' }}>
+              <i className="ti ti-repeat" style={{ fontSize: 13, color: '#1A1A2E' }} /><span style={{ fontSize: 11, fontWeight: 500, color: '#1A1A2E', whiteSpace: 'nowrap' }}>Change day</span>
+            </div>
           </div>
         </div>
         <div style={{ fontSize: 13, color: '#8A8A85', margin: '0 0 16px' }}>Week {w.week} · {w.dow} · {activeCount} exercises</div>
@@ -622,6 +669,8 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinis
         )}
       </div>
 
+      {showWarmup && <ExtraExercisesSheet title="Warm-Up Exercises" exercises={warmupExercises} onClose={() => setShowWarmup(false)} />}
+      {showCooldown && <ExtraExercisesSheet title="Cool-Down Exercises" exercises={cooldownExercises} onClose={() => setShowCooldown(false)} />}
       {dayOpen && <ChangeDaySheet current={dayType} weeklyPlanSplit={weeklyPlanSplit} onClose={() => setDayOpen(false)} onPick={t => { setDayOpen(false); swapMuscle(t); }} />}
       {pickerFor && (
         <SubstituteSheet 
