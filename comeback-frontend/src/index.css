@@ -67,15 +67,9 @@ input, button, textarea { font-family: var(--font-ui); }
   border-top: 6px solid var(--c-navy);
 }
 @media (min-width: 460px) {
-  body { 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    padding: 24px;
-    overflow: hidden;
-    overscroll-behavior-y: none;
-  }
+  body { display: flex; align-items: flex-start; justify-content: center; padding: 24px; overflow-y: auto; min-height: 100vh; }
   .app-shell {
+    margin: auto 0; /* Vertically center if tall enough, otherwise stay at flex-start */
     width: 430px;
     height: 880px;
     min-height: 880px;
@@ -99,7 +93,6 @@ input, button, textarea { font-family: var(--font-ui); }
   flex: 1;
   display: flex; flex-direction: column;
   padding: 12px 22px 22px;
-  padding-bottom: max(22px, calc(12px + env(safe-area-inset-bottom)));
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -436,4 +429,3 @@ input[type="date"] {
 /* calorie ring wrap */
 .ring-wrap { position: relative; width: 172px; height: 172px; margin: 0 auto; }
 .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-

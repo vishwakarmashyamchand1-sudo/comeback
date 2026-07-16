@@ -59,6 +59,22 @@ async function buildUserContext(userId, targetDate) {
       payload += `[${wDate}] Session: ${w.sessionType || 'General'} - Status: ${w.status}\n`;
       if (w.status === 'completed') {
         payload += `  Rating: ${w.sessionRating || 'N/A'}/10, Feel: ${w.sessionFeel || 'N/A'}\n`;
+        if (w.exercises && w.exercises.length > 0) {
+          payload += `  Exercises Details:\n`;
+          w.exercises.forEach(ex => {
+            const isSkipped = ex.wasSkipped;
+            const completedSets = ex.sets ? ex.sets.filter(s => s.completed).length : 0;
+            const totalSets = ex.sets ? ex.sets.length : 3;
+            
+            let exStatus = 'Completed';
+            if (isSkipped) exStatus = 'Skipped (user did not do it)';
+            else if (completedSets === 0) exStatus = 'Skipped (no sets completed)';
+            else if (completedSets < totalSets) exStatus = `Partially Completed (${completedSets}/${totalSets} sets)`;
+            else exStatus = `Fully Completed (${completedSets}/${totalSets} sets)`;
+
+            payload += `    - ${ex.exerciseName}: ${exStatus}\n`;
+          });
+        }
       }
     });
   } else {

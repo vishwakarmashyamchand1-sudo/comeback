@@ -925,6 +925,16 @@ const completeWorkout = asyncHandler(async (req, res) => {
   }
   
   // Important Note: Save completion data to DB immediately so user doesn't wait for Claude
+  
+  // Auto-skip any exercises that were completely untouched
+  workout.exercises.forEach(exercise => {
+    const isUntouched = exercise.sets.every(set => !set.completed);
+    if (isUntouched && !exercise.wasSkipped && !exercise.isCompleted) {
+      exercise.wasSkipped = true;
+      exercise.skipReason = 'Auto-skipped (no sets logged)';
+    }
+  });
+
   await workout.save();
 
   // 4. Step 47: Detect Personal Records
