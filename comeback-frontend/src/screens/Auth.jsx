@@ -100,7 +100,7 @@ export default function Auth() {
       <div style={{ marginTop: '20px', marginBottom: '30px' }}>
         <div className="wordmark">
           <span className="come">COME</span>
-          <span className="back" style={{ color: 'var(--c-lime)' }}>BACK</span>
+          <span className="back">BACK</span>
         </div>
       </div>
 
@@ -162,7 +162,7 @@ export default function Auth() {
         {error && <div className="err-text"><i className="ti ti-alert-circle" /> {error}</div>}
       </div>
 
-      <div style={{ marginTop: '15px' }}>
+      <div style={{ marginTop: '15px', textAlign: 'center' }}>
         <button 
           className="skip-btn" 
           onClick={() => {
