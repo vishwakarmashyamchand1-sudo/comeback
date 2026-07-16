@@ -14,6 +14,7 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
   const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
   const w = workout || todayWorkout; // fallback
+    const isDone = done || w.status === 'completed';
   const [dayType, setDayType] = useState(w.sessionType || w.type || 'Full Body');
   const [dayOpen, setDayOpen] = useState(false);
   const [showAllEx, setShowAllEx] = useState(false);
@@ -27,10 +28,30 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
 
   const [dietData, setDietData] = useState(null);
 
+  const [historyData, setHistoryData] = useState(null);
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/history`, {
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        alert(`API Error ${res.status}: ${text.slice(0, 50)}`);
+        return;
+      }
+      const data = await res.json();
+      setHistoryData(data);
+    } catch (err) {
+      console.error("Failed to fetch history:", err);
+    }
+  };
+
+
   useEffect(() => {
     async function fetchDiet() {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/diet/today`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/diet/today`, {
           headers: { 'Authorization': `Bearer ${state.token}` }
         });
         const data = await res.json();
@@ -63,7 +84,8 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
             <div className="subtle">{currentDay} · Week {w.week || w.weekNumber || computedWeek} · Day {w.day || computedDay}</div>
           </div>
           <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
-            <button className="icon-btn"><i className="ti ti-bell" />{!done && <span className="dot-red" />}</button>
+            <button className="icon-btn" onClick={fetchHistory}><i className="ti ti-calendar" /></button>
+            <button className="icon-btn"><i className="ti ti-bell" />{!isDone && <span className="dot-red" />}</button>
             <button className="icon-btn" onClick={onOpenProfile} style={{ borderRadius: '50%', background: '#1A1A2E', color: '#C8F25C', border: 'none', fontSize: 14, fontWeight: 600 }}>{initial}</button>
           </div>
         </div>
@@ -75,20 +97,20 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
               <i className="ti ti-barbell" style={{ color: '#C8F25C', fontSize: 18 }} />
               <span style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.08em', color: '#8A8AAA' }}>Today's workout</span>
             </div>
-            {done
+            {isDone
               ? <span className="badge green"><i className="ti ti-check" /> Done</span>
               : <span className="badge muted">Not started</span>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
             <div style={{ fontSize: 19, fontWeight: 500, letterSpacing: '-.02em', color: '#fff' }}>{dynamicTitle}</div>
-            {!done && (
+            {!isDone && (
               <div onClick={() => setDayOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 'none', background: '#ffffff14', borderRadius: 20, padding: '5px 10px', cursor: 'pointer' }}>
                 <i className="ti ti-repeat" style={{ color: '#C8F25C', fontSize: 13 }} /><span style={{ fontSize: 11, fontWeight: 500, color: '#C8F25C' }}>Change</span>
               </div>
             )}
           </div>
 
-          {done ? (
+          {isDone ? (
             (() => {
               const totalSets = w?.exercises?.reduce((sum, ex) => sum + (ex.wasSkipped ? 0 : (Array.isArray(ex.actualSetsArray || ex.sets) ? (ex.actualSetsArray || ex.sets).length : Number(ex.sets) || 0)), 0) || 0;
               const completedSets = w?.exercises?.reduce((sum, ex) => sum + (ex.wasSkipped ? 0 : (Array.isArray(ex.actualSetsArray || ex.sets) ? (ex.actualSetsArray || ex.sets).filter(s => s.completed).length : 0)), 0) || 0;
@@ -181,6 +203,54 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
         </div>
       </div>
       {dayOpen && <ChangeDaySheet current={dayType} weeklyPlanSplit={weeklyPlanSplit} onClose={() => setDayOpen(false)} onPick={(t, i) => { setDayType(t); setDayOpen(false); if (onFocusChange && i !== undefined) onFocusChange(i); }} />}
+      {historyData && (
+        <Sheet onClose={() => setHistoryData(null)}>
+          <div style={{ padding: '0 20px 22px', maxHeight: '70vh', overflowY: 'auto' }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: '#1A1A2E', marginBottom: 16 }}>Workout History</div>
+            
+            <div style={{ background: '#F5F5F3', borderRadius: 16, padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <div>
+                <div style={{ fontSize: 13, color: '#666', fontWeight: 500, marginBottom: 4 }}>Current Streak</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: '#1A1A2E' }}>{historyData.currentStreak || 0} <span style={{ fontSize: 20 }}>🔥</span></div>
+              </div>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <i className="ti ti-flame" style={{ fontSize: 24, color: '#FF9800' }} />
+              </div>
+            </div>
+
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#1A1A2E', marginBottom: 16 }}>Past Sessions</div>
+            
+            {historyData.sessions && historyData.sessions.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {historyData.sessions.map((session, i) => (
+                  <div key={i} style={{ padding: 16, border: '1px solid #DDDDD9', borderRadius: 16, background: '#fff' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: '#1A1A2E' }}>{new Date(session.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, background: '#F5F5F3', color: '#1A1A2E', padding: '4px 10px', borderRadius: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{session.sessionType || 'Workout'}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#666', fontWeight: 500 }}>
+                        <i className="ti ti-barbell" style={{ fontSize: 15 }} /> {session.exercisesCount || 0} exercises
+                      </div>
+                      {session.newPRs && session.newPRs.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#FF9800', fontWeight: 600 }}>
+                          <i className="ti ti-trophy" style={{ fontSize: 15 }} /> {session.newPRs.length} PRs
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#666', background: '#fff', border: '1px dashed #DDDDD9', borderRadius: 16 }}>
+                <i className="ti ti-history" style={{ fontSize: 32, opacity: 0.3, marginBottom: 12, display: 'block' }} />
+                <div style={{ fontSize: 14, fontWeight: 500, color: '#1A1A2E' }}>No completed workouts yet.</div>
+                <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>Finish your first session to start your streak!</div>
+              </div>
+            )}
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }
@@ -217,8 +287,27 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
   })));
   const [pickerFor, setPickerFor] = useState(null); // exercise id being substituted
   const [dayOpen, setDayOpen] = useState(false);
+  const [historyData, setHistoryData] = useState(null);
   const [dayType, setDayType] = useState(activeW.sessionType || activeW.type || 'Full Body');
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/history`, {
+        headers: { 'Authorization': `Bearer ${state.token}` }
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        alert(`API Error ${res.status}: ${text.slice(0, 50)}`);
+        return;
+      }
+      const data = await res.json();
+      setHistoryData(data);
+    } catch (err) {
+      console.error(err);
+      alert("Network/parse error: " + err.message);
+    }
+  };
 
   useEffect(() => {
     setRows((activeW.exercises || []).map(e => ({ 
@@ -232,7 +321,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
     if (!w._id || !state.token) return;
     setIsGenerating(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/tomorrow/swap-muscle`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/tomorrow/swap-muscle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
         body: JSON.stringify({ muscleGroup: targetMuscle, currentPlanId: w._id })
@@ -267,7 +356,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
     
     setIsGenerating(true); // repurpose loading screen for save
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/confirm`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/${w._id}/confirm`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
         body: JSON.stringify({ 
@@ -299,7 +388,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
     // Save to backend if real workout
     if (w._id && state.token && exerciseIndex !== -1) {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/skip-exercise`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/${w._id}/skip-exercise`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
           body: JSON.stringify({ exerciseIndex })
@@ -321,7 +410,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
     // Save to backend if real workout
     if (w._id && state.token && exerciseIndex !== -1) {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/restore-exercise`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/${w._id}/restore-exercise`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
           body: JSON.stringify({ exerciseIndex })
@@ -360,7 +449,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
     // Save to backend if real workout
     if (w._id && state.token && newDbId && exerciseIndex !== -1) {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/substitute-exercise`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/${w._id}/substitute-exercise`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
           body: JSON.stringify({ exerciseIndex, newExerciseId: newDbId })
@@ -379,7 +468,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
   if (restDay) {
     return (
       <div className="app-body">
-        <PushHeader title={isModifyMode ? "Tomorrow's workout" : "Today's workout"} onBack={onBack} right="ti-calendar" onRight={() => setDayOpen(true)} />
+        <PushHeader title={isModifyMode ? "Tomorrow's workout" : "Today's workout"} onBack={onBack} right="ti-calendar" onRight={fetchHistory} />
         <div className="screen-pad" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           <div style={{ width: 88, height: 88, borderRadius: '50%', background: '#E8E8F5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 22 }}><i className="ti ti-moon" style={{ fontSize: 40, color: '#1A1A2E' }} /></div>
           <div style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-.03em', color: '#1A1A2E', marginBottom: 8 }}>Rest day</div>
@@ -399,6 +488,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
         </div>
 
         {dayOpen && <ChangeDaySheet current={dayType} weeklyPlanSplit={weeklyPlanSplit} onClose={() => setDayOpen(false)} onPick={t => { setDayOpen(false); swapMuscle(t); }} />}
+
         {isGenerating && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.9)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} />
@@ -412,7 +502,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
 
   return (
     <div className="app-body">
-      <PushHeader title={isModifyMode ? "Tomorrow's plan" : "Today's workout"} onBack={onBack} right="ti-calendar" onRight={() => setDayOpen(true)} />
+      <PushHeader title={isModifyMode ? "Tomorrow's plan" : "Today's workout"} onBack={onBack} right="ti-calendar" onRight={fetchHistory} />
       <div className="screen-pad scroll" style={{ paddingTop: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <span className="badge green"><i className="ti ti-barbell" /> {dayType}</span>
@@ -518,6 +608,55 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
         />
       )}
       
+      {historyData && (
+        <Sheet onClose={() => setHistoryData(null)}>
+          <div style={{ padding: '0 20px 22px', maxHeight: '70vh', overflowY: 'auto' }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: '#1A1A2E', marginBottom: 16 }}>Workout History</div>
+            
+            <div style={{ background: '#F5F5F3', borderRadius: 16, padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <div>
+                <div style={{ fontSize: 13, color: '#666', fontWeight: 500, marginBottom: 4 }}>Current Streak</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: '#1A1A2E' }}>{historyData.currentStreak || 0} <span style={{ fontSize: 20 }}>🔥</span></div>
+              </div>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <i className="ti ti-flame" style={{ fontSize: 24, color: '#FF9800' }} />
+              </div>
+            </div>
+
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#1A1A2E', marginBottom: 16 }}>Past Sessions</div>
+            
+            {historyData.sessions && historyData.sessions.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {historyData.sessions.map((session, i) => (
+                  <div key={i} style={{ padding: 16, border: '1px solid #DDDDD9', borderRadius: 16, background: '#fff' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: '#1A1A2E' }}>{new Date(session.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, background: '#F5F5F3', color: '#1A1A2E', padding: '4px 10px', borderRadius: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{session.sessionType || 'Workout'}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#666', fontWeight: 500 }}>
+                        <i className="ti ti-barbell" style={{ fontSize: 15 }} /> {session.exercisesCount || 0} exercises
+                      </div>
+                      {session.newPRs && session.newPRs.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#FF9800', fontWeight: 600 }}>
+                          <i className="ti ti-trophy" style={{ fontSize: 15 }} /> {session.newPRs.length} PRs
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#666', background: '#fff', border: '1px dashed #DDDDD9', borderRadius: 16 }}>
+                <i className="ti ti-history" style={{ fontSize: 32, opacity: 0.3, marginBottom: 12, display: 'block' }} />
+                <div style={{ fontSize: 14, fontWeight: 500, color: '#1A1A2E' }}>No completed workouts yet.</div>
+                <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>Finish your first session to start your streak!</div>
+              </div>
+            )}
+          </div>
+        </Sheet>
+      )}
+
       {isGenerating && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.9)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <div className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} />
@@ -738,7 +877,7 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
     // API Call to log-set
     if (w._id && state.token) {
       try {
-        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/log-set`, {
+        await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/${w._id}/log-set`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -768,7 +907,7 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
   const skip = async () => {
     if (w._id && state.token) {
       try {
-        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/skip-exercise`, {
+        await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/${w._id}/skip-exercise`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -896,7 +1035,7 @@ export function PostSession({ workout, onDone, onModify }) {
     if (workout.status === 'completed' && state.token) {
       const fetchExistingSummary = async () => {
         try {
-          const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${workout._id}/summary`, {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/${workout._id}/summary`, {
             headers: { 'Authorization': `Bearer ${state.token}` }
           });
           const data = await res.json();
@@ -934,7 +1073,7 @@ export function PostSession({ workout, onDone, onModify }) {
     }
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${workout._id}/complete`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/${workout._id}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
         body: JSON.stringify({ sessionRating: rating, sessionFeel: feel, sessionDurationMins: Number(duration) })
@@ -965,7 +1104,7 @@ export function PostSession({ workout, onDone, onModify }) {
 
     setPhase('confirming');
     try {
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/tomorrow/confirm-ai`, {
+      await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/tomorrow/confirm-ai`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
         body: JSON.stringify({ tomorrowPlan: summaryData.tomorrowPlan })
@@ -1020,8 +1159,8 @@ export function PostSession({ workout, onDone, onModify }) {
     return (
       <div className="app-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <div className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} />
-        <div style={{ marginTop: 24, fontSize: 15, color: '#8A8A85', fontWeight: 500 }}>Generating your summary...</div>
-        <div style={{ fontSize: 13, color: '#8A8A85', opacity: 0.6, marginTop: 8 }}>This usually takes a few seconds</div>
+        <div style={{ marginTop: 24, fontSize: 15, color: '#8A8A85', fontWeight: 500 }}>{workout?.status === 'completed' ? 'Loading summary...' : 'Generating your summary...'}</div>
+        <div style={{ fontSize: 13, color: '#8A8A85', opacity: 0.6, marginTop: 8 }}>{workout?.status === 'completed' ? 'This usually takes a moment' : 'This usually takes a few seconds'}</div>
       </div>
     );
   }
@@ -1083,13 +1222,14 @@ export function PostSession({ workout, onDone, onModify }) {
             )}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-primary" style={{ flex: 1, padding: 13, fontSize: 13, opacity: phase === 'confirming' ? 0.7 : 1 }} onClick={confirmAndFinish} disabled={phase === 'confirming'}>
+            <button className="btn btn-primary" style={{ flex: 1, padding: 13, fontSize: 13, opacity: phase === 'confirming' ? 0.7 : 1 }} onClick={() => confirmAndFinish(false)} disabled={phase === 'confirming'}>
               {phase === 'confirming' ? 'Saving...' : <><span style={{ marginRight: 6 }}>Looks good</span> <i className="ti ti-check" /></>}
             </button>
             <button className="btn" style={{ flex: 1, padding: 13, fontSize: 13, background: '#fff', border: '1.5px solid #1A1A2E', color: '#1A1A2E', opacity: phase === 'confirming' ? 0.7 : 1 }} onClick={() => confirmAndFinish(true)} disabled={phase === 'confirming'}>
               {phase === 'confirming' ? 'Saving...' : 'Modify plan'}
             </button>
           </div>
+          
         </div>
       </div>
     </div>

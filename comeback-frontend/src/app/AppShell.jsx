@@ -67,11 +67,20 @@ export default function AppShell() {
     setLoading(true);
     const endpoint = offset === 0 ? '/api/workouts/today' : `/api/workouts/by-offset/${offset}`;
     
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${endpoint}`, {
+    fetch(`${import.meta.env.VITE_API_URL || ''}${endpoint}`, {
       headers: { 'Authorization': `Bearer ${state.token}` }
     })
-      .then(res => res.json())
+      .then(async res => {
+        if (res.status === 404) {
+          localStorage.removeItem('hasCompletedOnboarding');
+          localStorage.removeItem('comeback.onboarded');
+          window.location.reload();
+          return null;
+        }
+        return res.json();
+      })
       .then(data => {
+        if (!data) return;
         if (data.weeklyPlanSplit) setWeeklyPlanSplit(data.weeklyPlanSplit);
 
         if (data.workout) {
