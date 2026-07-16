@@ -28,9 +28,10 @@ export function ProgressSteps({ current, total = 5 }) {
 export function ObHeader({ step, onBack, onSkip, canSkip = true }) {
   return (
     <div className="ob-header">
-      <button className="back-btn" onClick={onBack} aria-label="Back">
-        <i className="ti ti-arrow-left" />
-      </button>
+      {onBack 
+        ? <button className="back-btn" onClick={onBack} aria-label="Back"><i className="ti ti-arrow-left" /></button>
+        : <span style={{ width: 28 }} />
+      }
       <span className="step-counter">Step {step} of 5</span>
       {canSkip
         ? <button className="skip-btn" onClick={onSkip}>Skip</button>
