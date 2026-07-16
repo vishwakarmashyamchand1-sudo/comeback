@@ -82,7 +82,7 @@ const getTodayWorkout = asyncHandler(async (req, res) => {
   const workout = await Workout.findOne({
     userId: user._id,
     date: today
-  }).populate('exercises.exerciseId', 'name equipment targetMuscle gifUrl whyLabel');
+  }).populate('exercises.exerciseId', 'name equipment targetMuscle secondaryMuscles instructionsEn gifUrl whyLabel');
 
   // Robust fallback: if user.weeklyPlanSplit is empty, extract it from the actual workouts for this week
   let activeSplit = user.weeklyPlanSplit || [];
@@ -163,7 +163,7 @@ const getWorkoutByOffset = asyncHandler(async (req, res) => {
   const workout = await Workout.findOne({
     userId: user._id,
     date: targetDate
-  }).populate('exercises.exerciseId', 'name equipment targetMuscle gifUrl whyLabel');
+  }).populate('exercises.exerciseId', 'name equipment targetMuscle secondaryMuscles instructionsEn gifUrl whyLabel');
 
   let activeSplit = user.weeklyPlanSplit || [];
   if (activeSplit.length === 0) {
@@ -360,7 +360,7 @@ const getWorkoutById = asyncHandler(async (req, res) => {
   const workout = await Workout.findOne({ 
     _id: req.params.id, 
     userId: req.user._id 
-  }).populate('exercises.exerciseId', 'name equipment targetMuscle gifUrl');
+  }).populate('exercises.exerciseId', 'name equipment targetMuscle secondaryMuscles instructionsEn gifUrl whyLabel');
 
   if (!workout) {
     res.status(404);
@@ -500,7 +500,7 @@ const addExercise = asyncHandler(async (req, res) => {
   await workout.save();
 
   // Populate the exercises before returning so the frontend has the gifUrls
-  await workout.populate('exercises.exerciseId', 'name equipment targetMuscle gifUrl whyLabel');
+  await workout.populate('exercises.exerciseId', 'name equipment targetMuscle secondaryMuscles instructionsEn gifUrl whyLabel');
 
   // Step 45: Return the updated workout
   res.status(200).json({
@@ -670,7 +670,8 @@ const swapMuscle = asyncHandler(async (req, res) => {
           finalExercises.push({
             ...ex,
             exerciseName: dbEx.name,
-            exerciseId: dbEx._id
+            exerciseId: dbEx._id,
+            muscleGroup: dbEx.muscleGroup
           });
         }
       }
@@ -1059,7 +1060,8 @@ const completeWorkout = asyncHandler(async (req, res) => {
           finalExercises.push({
             ...ex,
             exerciseName: dbEx.name,
-            exerciseId: dbEx._id
+            exerciseId: dbEx._id,
+            muscleGroup: dbEx.muscleGroup
           });
         }
       }
@@ -1143,11 +1145,20 @@ const substituteExercise = asyncHandler(async (req, res) => {
 
   // Update the workout's exercise entry
   const oldName = workout.exercises[exerciseIndex].exerciseName;
+  const originalName = workout.exercises[exerciseIndex].substitutedFrom;
+  const isReverting = (originalName === newExercise.name);
+
   workout.exercises[exerciseIndex].exerciseId = newExercise._id;
   workout.exercises[exerciseIndex].exerciseName = newExercise.name;
   workout.exercises[exerciseIndex].muscleGroup = newExercise.muscleGroup;
-  workout.exercises[exerciseIndex].wasSubstituted = true;
-  workout.exercises[exerciseIndex].substitutedFrom = oldName;
+  
+  if (isReverting) {
+    workout.exercises[exerciseIndex].wasSubstituted = false;
+    workout.exercises[exerciseIndex].substitutedFrom = null;
+  } else {
+    workout.exercises[exerciseIndex].wasSubstituted = true;
+    workout.exercises[exerciseIndex].substitutedFrom = oldName;
+  }
   
   // We keep the original planned sets/reps but reset completion status
   workout.exercises[exerciseIndex].sets.forEach(set => {

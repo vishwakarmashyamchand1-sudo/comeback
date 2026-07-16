@@ -55,12 +55,11 @@ const saveOnboardingProfile = asyncHandler(async (req, res) => {
       updateData.baselineLifts = { chestPressKg: null, shoulderPressKg: null, squatKg: null, deadliftKg: null };
     }
   } else if (step_number === 3) {
-    if (!data.primaryGoal || !data.motivationEvent || !data.urgencyLevel) {
+    if (!data.primaryGoal || !data.urgencyLevel) {
       res.status(400);
-      throw new Error('Step 3 requires primaryGoal, motivationEvent, and urgencyLevel');
+      throw new Error('Step 3 requires primaryGoal and urgencyLevel');
     }
     updateData.primaryGoal = data.primaryGoal;
-    updateData.upcomingEvent = data.motivationEvent; // mapped to model
     updateData.urgencyLevel = data.urgencyLevel;
   } else if (step_number === 4) {
     if (!data.dietType) {

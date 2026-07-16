@@ -51,7 +51,7 @@ export default function Step4({ onNext, onBack, onSkip, dir }) {
         ))}
       </div>
 
-      <SectionLabel>Supplements you take (optional)</SectionLabel>
+      <SectionLabel>Supplements you take</SectionLabel>
       <div className="pill-group">
         {SUPPLEMENTS.map(s => (
           <Pill key={s} label={s}

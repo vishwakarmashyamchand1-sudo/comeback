@@ -13,6 +13,7 @@ import Step5 from './screens/Step5.jsx';
 import Generating from './screens/Generating.jsx';
 import Auth from './screens/Auth.jsx';
 
+
 import { API_URL } from './lib/api.js';
 
 export default function App({ onEnterApp }) {
@@ -109,9 +110,10 @@ export default function App({ onEnterApp }) {
     
     step < 5 ? go(step + 1) : dispatch({ type: 'next', step: 'generating' });
   };
-  const back = () => {
+
+  const back = async () => {
     if (step === 1) {
-      signOut(auth);
+      await signOut(auth);
       dispatch({ type: 'logout' });
     } else {
       window.history.back();
