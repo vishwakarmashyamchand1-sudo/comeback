@@ -224,10 +224,15 @@ const getWorkoutHistory = asyncHandler(async (req, res) => {
   const workouts = await Workout.find({ 
     userId: user._id, 
     status: 'completed' 
-  }).sort({ date: -1 });
+  })
+  .select('date sessionType sessionRating sessionFeel exercises._id')
+  .sort({ date: -1 })
+  .lean();
 
   // Fetch all metrics to find PRs for Step 67
-  const metrics = await Metric.find({ userId: user._id });
+  const metrics = await Metric.find({ userId: user._id })
+  .select('newPRs userId')
+  .lean();
   let allPRs = [];
   metrics.forEach(m => {
     if (m.newPRs) allPRs.push(...m.newPRs);
