@@ -6,7 +6,7 @@ import { useOnboarding } from '../../lib/store.jsx';
 /* ─────────────────────────── DASHBOARD (Workout tab home) ── */
 export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle, goDiet, onOpenProfile, onChangeDay, weeklyPlanSplit, onFocusChange }) {
   const { state } = useOnboarding();
-  const userName = state.profile?.name || 'Athlete';
+  const userName = state.profile?.name || '';
   const initial = userName.charAt(0).toUpperCase();
 
   const hour = new Date().getHours();
@@ -17,7 +17,7 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
     const isDone = done || w.status === 'completed';
   const [dayType, setDayType] = useState(w.sessionType || w.type || 'Full Body');
   const [dayOpen, setDayOpen] = useState(false);
-  const [showAllEx, setShowAllEx] = useState(false);
+  const [showAllEx, setShowAllEx] = useState(true);
 
   // Dynamically generate the title based on the selected dayType safely
   const safeDayType = (typeof dayType === 'string' && dayType.trim() !== '') ? dayType : 'Full Body';
@@ -181,7 +181,7 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
 
         {/* coach */}
         <div style={{ marginBottom: 14 }}>
-          <CoachCard>{dietData?.dietLog?.dailyCoachTip || "Day 2 of your comeback. Ease in today — hit the planned weights, don't chase PRs yet."}</CoachCard>
+          <CoachCard>{workoutData?.workout?.aiSummary || dietData?.dietLog?.dailyCoachTip || "Day 2 of your comeback. Ease in today — hit the planned weights, don't chase PRs yet."}</CoachCard>
         </div>
 
         {/* circle */}
@@ -838,7 +838,7 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
   const [idx, setIdx] = useState(0);
   const [skipReason, setSkipReason] = useState('');
   const w = workout || todayWorkout;
-  const activeExercises = w.exercises.filter(e => !e.wasSkipped);
+  const activeExercises = (w.exercises || []).map((e, i) => ({ ...e, originalIndex: i })).filter(e => !e.wasSkipped);
   
   if (activeExercises.length === 0) {
     return (
@@ -1071,6 +1071,7 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
   const [summaryData, setSummaryData] = useState(null);
   
   const feels = [['Easy', 'ti-feather'], ['Good', 'ti-thumb-up'], ['Hard', 'ti-flame'], ['Exhausted', 'ti-battery-1']];
+  const [showAllTomorrow, setShowAllTomorrow] = useState(false);
 
   // Fetch summary if already completed
   useEffect(() => {
@@ -1254,7 +1255,7 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 14 }}>
             {!isRest ? (
-              tomorrow.exercises.slice(0, 3).map((e, i) => (
+              tomorrow.exercises.slice(0, showAllTomorrow ? tomorrow.exercises.length : 3).map((e, i) => (
                 <React.Fragment key={i}>
                   {i > 0 && <div className="rowline" />}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}><span style={{ color: '#1A1A2E' }}>{e.exerciseName}</span><span style={{ color: '#8A8A85' }}>{e.reps || '10-12'} reps</span></div>
@@ -1263,8 +1264,11 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
             ) : (
               <div style={{ fontSize: 13, color: '#8A8A85', fontStyle: 'italic' }}>Time to recover and rebuild!</div>
             )}
-            {!isRest && tomorrow.exercises.length > 3 && (
-              <div style={{ fontSize: 12, color: '#8A8A85' }}>+ {tomorrow.exercises.length - 3} more</div>
+            {!isRest && tomorrow.exercises.length > 3 && !showAllTomorrow && (
+              <div style={{ fontSize: 12, color: '#8A8A85', cursor: 'pointer' }} onClick={() => setShowAllTomorrow(true)}>+ {tomorrow.exercises.length - 3} more</div>
+            )}
+            {!isRest && tomorrow.exercises.length > 3 && showAllTomorrow && (
+              <div style={{ fontSize: 12, color: '#8A8A85', cursor: 'pointer' }} onClick={() => setShowAllTomorrow(false)}>Show less</div>
             )}
           </div>
           {isCompleted ? (

@@ -1,0 +1,212 @@
+[
+  {
+    "sourceId": "1512",
+    "name": "Quadriceps Stretch",
+    "nameSlug": "quadriceps-stretch",
+    "muscleGroup": "Cooldown",
+    "targetMuscle": "",
+    "secondaryMuscles": [],
+    "equipment": "body weight",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1512-qBcKorM.gif",
+    "gifFileName": "videos/1512-qBcKorM.gif",
+    "whyLabel": "Improves quad flexibility and reduces soreness",
+    "beginnerTip": "Keep your knees close together and maintain balance",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "cooldown",
+      "body weight"
+    ],
+    "instructionsEn": "Perform the quadriceps stretch for the specified duration.",
+    "isActive": true
+  },
+  {
+    "sourceId": "1708",
+    "name": "Partner Hamstring Stretch",
+    "nameSlug": "partner-hamstring-stretch",
+    "muscleGroup": "Cooldown",
+    "targetMuscle": "",
+    "secondaryMuscles": [],
+    "equipment": "body weight",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1708-GxDwDX0.gif",
+    "gifFileName": "videos/1708-GxDwDX0.gif",
+    "whyLabel": "Deepens hamstring flexibility with partner assistance",
+    "beginnerTip": "Communicate with your partner to avoid overstretching",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "cooldown",
+      "body weight"
+    ],
+    "instructionsEn": "Perform the partner hamstring stretch for the specified duration.",
+    "isActive": true
+  },
+  {
+    "sourceId": "1709",
+    "name": "Partner Glute Stretch",
+    "nameSlug": "partner-glute-stretch",
+    "muscleGroup": "Cooldown",
+    "targetMuscle": "",
+    "secondaryMuscles": [],
+    "equipment": "body weight",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1709-yn0LjwL.gif",
+    "gifFileName": "videos/1709-yn0LjwL.gif",
+    "whyLabel": "Relieves glute tension and improves hip mobility",
+    "beginnerTip": "Breathe into the stretch and keep your back flat",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "cooldown",
+      "body weight"
+    ],
+    "instructionsEn": "Perform the partner glute stretch for the specified duration.",
+    "isActive": true
+  },
+  {
+    "sourceId": "1710",
+    "name": "Partner Hip Stretch",
+    "nameSlug": "partner-hip-stretch",
+    "muscleGroup": "Cooldown",
+    "targetMuscle": "",
+    "secondaryMuscles": [],
+    "equipment": "body weight",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1710-RQNVT10.gif",
+    "gifFileName": "videos/1710-RQNVT10.gif",
+    "whyLabel": "Opens up hip flexors and increases range of motion",
+    "beginnerTip": "Hold the stretch steadily without bouncing",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "cooldown",
+      "body weight"
+    ],
+    "instructionsEn": "Perform the partner hip stretch for the specified duration.",
+    "isActive": true
+  },
+  {
+    "sourceId": "1713",
+    "name": "Partner Quad Stretch",
+    "nameSlug": "partner-quad-stretch",
+    "muscleGroup": "Cooldown",
+    "targetMuscle": "",
+    "secondaryMuscles": [],
+    "equipment": "body weight",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1713-YUYAMEj.gif",
+    "gifFileName": "videos/1713-YUYAMEj.gif",
+    "whyLabel": "Enhances quad stretch intensity with partner aid",
+    "beginnerTip": "Ensure your partner applies gentle, gradual pressure",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "cooldown",
+      "body weight"
+    ],
+    "instructionsEn": "Perform the partner quad stretch for the specified duration.",
+    "isActive": true
+  },
+  {
+    "sourceId": "1160",
+    "name": "Full Body Warm Up March",
+    "nameSlug": "full-body-warm-up-march",
+    "muscleGroup": "Warm-up",
+    "targetMuscle": "",
+    "secondaryMuscles": [],
+    "equipment": "body weight",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1160-dK9394r.gif",
+    "gifFileName": "videos/1160-dK9394r.gif",
+    "whyLabel": "Raises heart rate and preps the entire body",
+    "beginnerTip": "Pump your arms and lift your knees high",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "warm-up",
+      "body weight"
+    ],
+    "instructionsEn": "Perform the full body warm up march for the specified duration.",
+    "isActive": true
+  },
+  {
+    "sourceId": "2331",
+    "name": "Air Bike Warm Up",
+    "nameSlug": "air-bike-warm-up",
+    "muscleGroup": "Warm-up",
+    "targetMuscle": "",
+    "secondaryMuscles": [],
+    "equipment": "body weight",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/2331-XSCHmiI.gif",
+    "gifFileName": "videos/2331-XSCHmiI.gif",
+    "whyLabel": "Quickly elevates core temperature and blood flow",
+    "beginnerTip": "Start at a moderate pace to ease into the workout",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "warm-up",
+      "body weight"
+    ],
+    "instructionsEn": "Perform the air bike warm up for the specified duration.",
+    "isActive": true
+  },
+  {
+    "sourceId": "3220",
+    "name": "Standing Full Body Warm Up",
+    "nameSlug": "standing-full-body-warm-up",
+    "muscleGroup": "Warm-up",
+    "targetMuscle": "",
+    "secondaryMuscles": [],
+    "equipment": "body weight",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/3220-f9lVSSI.gif",
+    "gifFileName": "videos/3220-f9lVSSI.gif",
+    "whyLabel": "Activates multiple muscle groups for training",
+    "beginnerTip": "Focus on fluid movements and steady breathing",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "warm-up",
+      "body weight"
+    ],
+    "instructionsEn": "Perform the standing full body warm up for the specified duration.",
+    "isActive": true
+  },
+  {
+    "sourceId": "3360",
+    "name": "Bear Crawl Warm Up",
+    "nameSlug": "bear-crawl-warm-up",
+    "muscleGroup": "Warm-up",
+    "targetMuscle": "",
+    "secondaryMuscles": [],
+    "equipment": "body weight",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/3360-0Yz8WdV.gif",
+    "gifFileName": "videos/3360-0Yz8WdV.gif",
+    "whyLabel": "Engages the core and warms up shoulders and hips",
+    "beginnerTip": "Keep your back flat and hips low to the ground",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "warm-up",
+      "body weight"
+    ],
+    "instructionsEn": "Perform the bear crawl warm up for the specified duration.",
+    "isActive": true
+  },
+  {
+    "sourceId": "3672",
+    "name": "Lateral Lunge Reach Warm Up",
+    "nameSlug": "lateral-lunge-reach-warm-up",
+    "muscleGroup": "Warm-up",
+    "targetMuscle": "",
+    "secondaryMuscles": [],
+    "equipment": "body weight",
+    "gifUrl": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/3672-fNGumX0.gif",
+    "gifFileName": "videos/3672-fNGumX0.gif",
+    "whyLabel": "Warms up inner thighs and improves lateral mobility",
+    "beginnerTip": "Keep your chest up and push your hips back",
+    "avoidIf": [],
+    "goalTags": [
+      "fitness",
+      "warm-up",
+      "body weight"
+    ],
+    "instructionsEn": "Perform the lateral lunge reach warm up for the specified duration.",
+    "isActive": true
+  }
+]

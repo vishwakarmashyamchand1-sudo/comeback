@@ -13,7 +13,8 @@ const ExerciseSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: ['Chest','Back','Shoulders','Biceps','Triceps',
-           'Legs_Quads','Legs_Hamstrings','Glutes','Calves','Core','Forearms'],
+           'Legs_Quads','Legs_Hamstrings','Glutes','Calves','Core','Forearms',
+           'Cooldown', 'Warmup'],
     index: true
   },
   targetMuscle:     { type: String, required: true },  // e.g. 'pectorals'

@@ -1,0 +1,94 @@
+{
+  "Exercises": [
+    {
+      "muscle_group": "cooldown",
+      "exercise_id": "1512-qBcKorM",
+      "exercise_name": "Quadriceps Stretch",
+      "equipment": "body weight",
+      "gif_filename": "1512-qBcKorM.gif",
+      "cloudflare_url_to_fill": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1512-qBcKorM.gif",
+      "category": "cooldown"
+    },
+    {
+      "muscle_group": "cooldown",
+      "exercise_id": "1708-GxDwDX0",
+      "exercise_name": "Partner Hamstring Stretch",
+      "equipment": "body weight",
+      "gif_filename": "1708-GxDwDX0.gif",
+      "cloudflare_url_to_fill": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1708-GxDwDX0.gif",
+      "category": "cooldown"
+    },
+    {
+      "muscle_group": "cooldown",
+      "exercise_id": "1709-yn0LjwL",
+      "exercise_name": "Partner Glute Stretch",
+      "equipment": "body weight",
+      "gif_filename": "1709-yn0LjwL.gif",
+      "cloudflare_url_to_fill": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1709-yn0LjwL.gif",
+      "category": "cooldown"
+    },
+    {
+      "muscle_group": "cooldown",
+      "exercise_id": "1710-RQNVT10",
+      "exercise_name": "Partner Hip Stretch",
+      "equipment": "body weight",
+      "gif_filename": "1710-RQNVT10.gif",
+      "cloudflare_url_to_fill": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1710-RQNVT10.gif",
+      "category": "cooldown"
+    },
+    {
+      "muscle_group": "cooldown",
+      "exercise_id": "1713-YUYAMEj",
+      "exercise_name": "Partner Quad Stretch",
+      "equipment": "body weight",
+      "gif_filename": "1713-YUYAMEj.gif",
+      "cloudflare_url_to_fill": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1713-YUYAMEj.gif",
+      "category": "cooldown"
+    },
+    {
+      "muscle_group": "warm-up",
+      "exercise_id": "1160-dK9394r",
+      "exercise_name": "Full Body Warm Up March",
+      "equipment": "body weight",
+      "gif_filename": "1160-dK9394r.gif",
+      "cloudflare_url_to_fill": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/1160-dK9394r.gif",
+      "category": "warm-up"
+    },
+    {
+      "muscle_group": "warm-up",
+      "exercise_id": "2331-XSCHmiI",
+      "exercise_name": "Air Bike Warm Up",
+      "equipment": "body weight",
+      "gif_filename": "2331-XSCHmiI.gif",
+      "cloudflare_url_to_fill": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/2331-XSCHmiI.gif",
+      "category": "warm-up"
+    },
+    {
+      "muscle_group": "warm-up",
+      "exercise_id": "3220-f9lVSSI",
+      "exercise_name": "Standing Full Body Warm Up",
+      "equipment": "body weight",
+      "gif_filename": "3220-f9lVSSI.gif",
+      "cloudflare_url_to_fill": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/3220-f9lVSSI.gif",
+      "category": "warm-up"
+    },
+    {
+      "muscle_group": "warm-up",
+      "exercise_id": "3360-0Yz8WdV",
+      "exercise_name": "Bear Crawl Warm Up",
+      "equipment": "body weight",
+      "gif_filename": "3360-0Yz8WdV.gif",
+      "cloudflare_url_to_fill": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/3360-0Yz8WdV.gif",
+      "category": "warm-up"
+    },
+    {
+      "muscle_group": "warm-up",
+      "exercise_id": "3672-fNGumX0",
+      "exercise_name": "Lateral Lunge Reach Warm Up",
+      "equipment": "body weight",
+      "gif_filename": "3672-fNGumX0.gif",
+      "cloudflare_url_to_fill": "https://pub-bcc929dbed6c495e8b2abc3612778cfd.r2.dev/3672-fNGumX0.gif",
+      "category": "warm-up"
+    }
+  ]
+}

@@ -30,13 +30,13 @@ export default function AppShell() {
 
   const handleTabChange = newTab => {
     if (tab === newTab) return;
-    window.history.pushState({ tab: newTab, stack }, '', '#' + newTab);
+    window.history.pushState({ tab: newTab, stack }, '', window.location.pathname);
     setTab(newTab);
   };
 
   const push = s => {
     const newStack = [...stack, s];
-    window.history.pushState({ tab, stack: newStack }, '', '#' + s);
+    window.history.pushState({ tab, stack: newStack }, '', window.location.pathname);
     setStack(newStack);
   };
   const pop = () => {
@@ -45,18 +45,18 @@ export default function AppShell() {
         const newStack = prevStack.slice(0, -1);
         const currentTab = stateRef.current ? stateRef.current.tab : tab;
         const prevPage = newStack.length > 0 ? newStack[newStack.length - 1] : currentTab;
-        window.history.replaceState({ tab: currentTab, stack: newStack }, '', '#' + prevPage);
+        window.history.replaceState({ tab: currentTab, stack: newStack }, '', window.location.pathname);
         return newStack;
       }
       return prevStack;
     });
   };
   const reset = () => {
-    window.history.pushState({ tab, stack: [] }, '', '#' + tab);
+    window.history.pushState({ tab, stack: [] }, '', window.location.pathname);
     setStack([]);
   };
   const replace = s => {
-    window.history.replaceState({ tab, stack: [s] }, '', '#' + s);
+    window.history.replaceState({ tab, stack: [s] }, '', window.location.pathname);
     setStack([s]);
   };
   const top = stack[stack.length - 1];
@@ -72,10 +72,8 @@ export default function AppShell() {
     })
       .then(async res => {
         if (res.status === 404) {
-          localStorage.removeItem('hasCompletedOnboarding');
-          localStorage.removeItem('comeback.onboarded');
-          window.location.reload();
-          return null;
+          // Prevent infinite reload loop if user is marked onboarded but has no workout
+          return { workout: null, isRestDay: false, weeklyPlanSplit: [] };
         }
         return res.json();
       })
@@ -132,7 +130,7 @@ export default function AppShell() {
   }, [state.token]);
 
   useEffect(() => {
-    window.history.replaceState({ tab: 'workout', stack: [] }, '', '#workout');
+    window.history.replaceState({ tab: 'workout', stack: [] }, '', window.location.pathname);
 
     const handlePopState = (e) => {
       if (e.state) {

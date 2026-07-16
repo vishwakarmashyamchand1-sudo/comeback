@@ -105,22 +105,10 @@ const getUserProfile = asyncHandler(async (req, res) => {
       await existingEmailUser.save();
       user = existingEmailUser;
     } else {
-      // Auto-create the MongoDB user to recover from the inconsistent state
-      try {
-        user = await User.create({
-          name: user.name || "Athlete",
-          email: user.email || `${user.firebaseUid}@fallback.comeback.app`,
-          firebaseUid: user.firebaseUid,
-          onboardingComplete: false
-        });
-      } catch (err) {
-        if (err.code === 11000) {
-          console.warn("Race condition during auto-create, user already exists. Fetching...");
-          user = await User.findOne({ firebaseUid: user.firebaseUid }) || await User.findOne({ email: user.email });
-        } else {
-          throw err;
-        }
-      }
+      // Do NOT auto-create the MongoDB user here. It causes race conditions with /register
+      // where the fallback name "Athlete" overwrites the real name.
+      res.status(404);
+      throw new Error("User record not found in database. Please register first.");
     }
   }
 
