@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar as CapStatusBar, Style } from '@capacitor/status-bar';
+import { signOut } from 'firebase/auth';
+import { auth } from './lib/firebase.js';
 import { useOnboarding } from './lib/store.jsx';
 import { StatusBar } from './components/UI.jsx';
 import Step1 from './screens/Step1.jsx';
@@ -108,7 +110,12 @@ export default function App({ onEnterApp }) {
     step < 5 ? go(step + 1) : dispatch({ type: 'next', step: 'generating' });
   };
   const back = () => {
-    window.history.back();
+    if (step === 1) {
+      signOut(auth);
+      dispatch({ type: 'logout' });
+    } else {
+      window.history.back();
+    }
   };
 
   const skip = () => next();
@@ -197,7 +204,7 @@ export default function App({ onEnterApp }) {
   const dark = step === 'generating';
 
   return (
-    <div className="app-shell" style={dark ? { background: '#1A1A2E' } : undefined}>
+    <div className="app-shell">
       {screen}
     </div>
   );
@@ -219,10 +226,10 @@ function PlanReady({ onRestart, onContinue }) {
       <div className="gen-title">Your plan is ready, {name}</div>
       <div className="gen-sub">Week 1 comeback plan · {state.background?.daysPerWeek || 4} days / week<br />Tailored to your goals, gym and health.</div>
       <div style={{ width: '100%', marginTop: 8 }}>
-        <button className="btn btn-lime" onClick={onContinue}>
+        <button className="btn btn-primary" onClick={onContinue}>
           Let's go <i className="ti ti-arrow-right btn-icon" />
         </button>
-        <button className="btn" style={{ marginTop: 10, background: 'transparent', color: '#8A8AAA', borderColor: '#ffffff1A' }} onClick={onRestart}>
+        <button className="btn" style={{ marginTop: 10, background: 'transparent', color: 'var(--c-text-muted)', borderColor: 'var(--c-border)' }} onClick={onRestart}>
           Start over
         </button>
       </div>

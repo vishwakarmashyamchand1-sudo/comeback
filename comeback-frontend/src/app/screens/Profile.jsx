@@ -4,7 +4,7 @@ import { useOnboarding } from '../../lib/store.jsx';
 import { auth } from '../../lib/firebase.js';
 import { signOut } from 'firebase/auth';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export function Profile({ onBack }) {
   const { state } = useOnboarding();

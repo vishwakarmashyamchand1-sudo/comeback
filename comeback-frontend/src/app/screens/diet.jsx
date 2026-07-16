@@ -52,7 +52,7 @@ export function Diet({ onLogMeal }) {
   useEffect(() => {
     async function fetchDiet() {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/diet/today`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/diet/today`, {
           headers: { 'Authorization': `Bearer ${state.token}` }
         });
         const data = await res.json();
@@ -66,7 +66,7 @@ export function Diet({ onLogMeal }) {
     
     async function fetchTip() {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/diet/tip`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/diet/tip`, {
           headers: { 'Authorization': `Bearer ${state.token}` }
         });
         const tipData = await res.json();
@@ -91,7 +91,7 @@ export function Diet({ onLogMeal }) {
     // Optimistic update
     setDietData(prev => prev ? { ...prev, runningTotals: { ...prev.runningTotals, waterGlasses: glasses } } : prev);
     try {
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/diet/water`, {
+      await fetch(`${import.meta.env.VITE_API_URL || ''}/api/diet/water`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
         body: JSON.stringify({ glasses })
@@ -264,7 +264,7 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
 
     async function analyze() {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/diet/analyze-photo`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/diet/analyze-photo`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -324,7 +324,7 @@ export function FoodPhoto({ photo, onBack, onConfirm }) {
         fatG: Number(it.fat) || 0
       }));
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/diet/log-meal`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/diet/log-meal`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

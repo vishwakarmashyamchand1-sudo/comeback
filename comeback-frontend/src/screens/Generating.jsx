@@ -21,7 +21,7 @@ export default function Generating({ onDone }) {
     fetched.current = true;
     
     // 1. Fire off the backend AI generation
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/onboarding/complete`, {
+    fetch(`${import.meta.env.VITE_API_URL || ''}/api/onboarding/complete`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
