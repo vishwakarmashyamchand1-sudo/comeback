@@ -14,6 +14,7 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
   const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
   const w = workout || todayWorkout; // fallback
+    const isDone = done || w.status === 'completed';
   const [dayType, setDayType] = useState(w.sessionType || w.type || 'Full Body');
   const [dayOpen, setDayOpen] = useState(false);
   const [showAllEx, setShowAllEx] = useState(false);
@@ -84,7 +85,7 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
           </div>
           <div style={{ display: 'flex', gap: 9, flex: 'none' }}>
             <button className="icon-btn" onClick={fetchHistory}><i className="ti ti-calendar" /></button>
-            <button className="icon-btn"><i className="ti ti-bell" />{!done && <span className="dot-red" />}</button>
+            <button className="icon-btn"><i className="ti ti-bell" />{!isDone && <span className="dot-red" />}</button>
             <button className="icon-btn" onClick={onOpenProfile} style={{ borderRadius: '50%', background: '#1A1A2E', color: '#C8F25C', border: 'none', fontSize: 14, fontWeight: 600 }}>{initial}</button>
           </div>
         </div>
@@ -96,20 +97,20 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
               <i className="ti ti-barbell" style={{ color: '#C8F25C', fontSize: 18 }} />
               <span style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.08em', color: '#8A8AAA' }}>Today's workout</span>
             </div>
-            {done
+            {isDone
               ? <span className="badge green"><i className="ti ti-check" /> Done</span>
               : <span className="badge muted">Not started</span>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
             <div style={{ fontSize: 19, fontWeight: 500, letterSpacing: '-.02em', color: '#fff' }}>{dynamicTitle}</div>
-            {!done && (
+            {!isDone && (
               <div onClick={() => setDayOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 'none', background: '#ffffff14', borderRadius: 20, padding: '5px 10px', cursor: 'pointer' }}>
                 <i className="ti ti-repeat" style={{ color: '#C8F25C', fontSize: 13 }} /><span style={{ fontSize: 11, fontWeight: 500, color: '#C8F25C' }}>Change</span>
               </div>
             )}
           </div>
 
-          {done ? (
+          {isDone ? (
             (() => {
               const totalSets = w?.exercises?.reduce((sum, ex) => sum + (ex.wasSkipped ? 0 : (Array.isArray(ex.actualSetsArray || ex.sets) ? (ex.actualSetsArray || ex.sets).length : Number(ex.sets) || 0)), 0) || 0;
               const completedSets = w?.exercises?.reduce((sum, ex) => sum + (ex.wasSkipped ? 0 : (Array.isArray(ex.actualSetsArray || ex.sets) ? (ex.actualSetsArray || ex.sets).filter(s => s.completed).length : 0)), 0) || 0;
@@ -1093,8 +1094,8 @@ export function PostSession({ workout, onDone, onModify }) {
     return (
       <div className="app-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <div className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} />
-        <div style={{ marginTop: 24, fontSize: 15, color: '#8A8A85', fontWeight: 500 }}>Generating your summary...</div>
-        <div style={{ fontSize: 13, color: '#8A8A85', opacity: 0.6, marginTop: 8 }}>This usually takes a few seconds</div>
+        <div style={{ marginTop: 24, fontSize: 15, color: '#8A8A85', fontWeight: 500 }}>{workout?.status === 'completed' ? 'Loading summary...' : 'Generating your summary...'}</div>
+        <div style={{ fontSize: 13, color: '#8A8A85', opacity: 0.6, marginTop: 8 }}>{workout?.status === 'completed' ? 'This usually takes a moment' : 'This usually takes a few seconds'}</div>
       </div>
     );
   }
@@ -1163,9 +1164,7 @@ export function PostSession({ workout, onDone, onModify }) {
               {phase === 'confirming' ? 'Saving...' : 'Modify plan'}
             </button>
           </div>
-          <button className="btn" style={{ width: '100%', marginTop: 12, padding: 13, fontSize: 13, background: 'transparent', color: '#8A8A85', border: 'none', opacity: phase === 'confirming' ? 0.7 : 1 }} onClick={() => onDone()} disabled={phase === 'confirming'}>
-             Go to dashboard
-          </button>
+          
         </div>
       </div>
     </div>
