@@ -986,7 +986,7 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
       }
     }
 
-    if (last) onBack(); else setIdx(i => i + 1); 
+    if (last) onFinish(); else setIdx(i => i + 1); 
   };
   const nextEx = activeExercises[idx + 1];
 
@@ -1124,7 +1124,23 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
 
   // Fetch summary if already completed
   useEffect(() => {
-    if (isCompleted && state.token) {
+    if (isCompleted) {
+      if (!state.token || !workout?._id) {
+        setSummaryData({ 
+          aiSummary: "Great session! You're making progress. Let's get some rest and hit it hard tomorrow.", 
+          newPRs: [],
+          workout: {
+            ...workout,
+            exercises: (workout?.exercises || []).map(e => ({
+              ...e,
+              actualSetsArray: Array.from({ length: e.sets || 3 }, () => ({ completed: true }))
+            }))
+          }
+        });
+        setPhase('summary');
+        return;
+      }
+
       const fetchExistingSummary = async () => {
         try {
           const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/${workout._id}/summary`, {
@@ -1162,7 +1178,17 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
     // Fallback if not logged in (dummy flow)
     if (!state.token || !workout._id) {
       setTimeout(() => {
-        setSummaryData({ aiSummary: "Great session! You're making progress. Let's get some rest and hit it hard tomorrow.", newPRs: [] });
+        setSummaryData({ 
+          aiSummary: "Great session! You're making progress. Let's get some rest and hit it hard tomorrow.", 
+          newPRs: [],
+          workout: {
+            ...workout,
+            exercises: (workout.exercises || []).map(e => ({
+              ...e,
+              actualSetsArray: Array.from({ length: e.sets || 3 }, () => ({ completed: true }))
+            }))
+          }
+        });
         setPhase('summary');
       }, 1500);
       return;
@@ -1262,8 +1288,8 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
   }
 
   const tomorrow = summaryData?.tomorrowPlan || { sessionType: 'Rest Day', dayOfWeek: 'Tomorrow', exercises: [] };
-  const setsDoneCount = summaryData?.workout?.exercises?.reduce((acc, ex) => acc + (Array.isArray(ex.sets) ? ex.sets.filter(s => s.completed).length : 0), 0) || 0;
-  const totalSets = summaryData?.workout?.exercises?.reduce((acc, ex) => acc + (Array.isArray(ex.sets) ? ex.sets.length : Number(ex.sets) || 0), 0) || 0;
+  const setsDoneCount = summaryData?.workout?.exercises?.reduce((acc, ex) => acc + (ex.wasSkipped ? 0 : (Array.isArray(ex.actualSetsArray || ex.sets) ? (ex.actualSetsArray || ex.sets).filter(s => s.completed).length : 0)), 0) || 0;
+  const totalSets = summaryData?.workout?.exercises?.reduce((acc, ex) => acc + (ex.wasSkipped ? 0 : (Array.isArray(ex.actualSetsArray || ex.sets) ? (ex.actualSetsArray || ex.sets).length : Number(ex.sets) || 0)), 0) || 0;
   const prCount = summaryData?.newPRs?.length || 0;
   const isRest = tomorrow.status === 'rest_day' || tomorrow.sessionType === 'Rest Day';
 
