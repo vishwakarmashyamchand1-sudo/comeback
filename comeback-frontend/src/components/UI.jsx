@@ -43,9 +43,9 @@ export function ObHeader({ step, onBack, onSkip, canSkip = true }) {
 export function StepIntro({ icon, tag, title, sub }) {
   return (
     <>
-      <div className="step-tag"><i className={`ti ti-${icon}`} /> {tag}</div>
+      {tag && <div className="step-tag"><i className={`ti ti-${icon}`} /> {tag}</div>}
       <div className="ob-q-title" dangerouslySetInnerHTML={{ __html: title }} />
-      <div className="ob-q-sub">{sub}</div>
+      {sub && <div className="ob-q-sub">{sub}</div>}
     </>
   );
 }
