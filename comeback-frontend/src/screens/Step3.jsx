@@ -17,7 +17,7 @@ export default function Step3({ onNext, onBack, onSkip, dir }) {
   const g = state.goal;
   const set = value => dispatch({ type: 'patch', slice: 'goal', value });
 
-    const valid = g.goal && g.urgency && g.event;
+    const valid = g.goal && g.urgency;
 
   return (
     <div className={`screen anim-${dir}`}>
@@ -34,7 +34,7 @@ export default function Step3({ onNext, onBack, onSkip, dir }) {
       ))}
 
 
-      <SectionLabel>Any specific event motivating you?</SectionLabel>
+      <SectionLabel>Any specific event motivating you? <span style={{opacity: 0.5, fontWeight: 400}}>(optional)</span></SectionLabel>
       <TextField value={g.event} onChange={v => set({ event: v })} placeholder="e.g. Wedding anniversary — July 1" />
 
       <SectionLabel>Urgency</SectionLabel>

@@ -268,9 +268,12 @@ function Metric({ label, val, target, value, max }) {
 }
 
 /* ─────────────────────────── WORKOUT PLAN ────────────────── */
-export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddExercise, refreshWorkout, isModifyMode }) {
+export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddExercise, onSubstituteBrowse, refreshWorkout, isModifyMode }) {
   const { state } = useOnboarding();
   const w = workout || todayWorkout;
+
+  const [expandedCards, setExpandedCards] = useState({});
+  const toggleCard = (id) => setExpandedCards(prev => ({...prev, [id]: !prev[id]}));
   
   const [pendingOverride, setPendingOverride] = useState(null);
   const activeW = pendingOverride || w;
@@ -424,9 +427,24 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
   const substitute = async (id, name, newDbId) => {
     // Find index of the exercise in the array
     const exerciseIndex = rows.findIndex(r => r.id === id);
+    const ex = rows[exerciseIndex];
+    const isReverting = (ex.substitutedFrom === name || ex.was === name);
     
     // Optimistic UI
-    setRows(rs => rs.map(r => r.id === id ? { ...r, state: 'sub', was: r.name, name, exerciseDbId: newDbId } : r));
+    setRows(rs => rs.map(r => {
+      if (r.id === id) {
+        return { 
+          ...r, 
+          state: isReverting ? (r.addedByUser ? 'added' : 'active') : 'sub', 
+          was: isReverting ? null : r.name, 
+          name, 
+          exerciseDbId: newDbId,
+          wasSubstituted: !isReverting,
+          substitutedFrom: isReverting ? null : r.name
+        };
+      }
+      return r;
+    }));
     
     // Save to backend if real workout
     if (w._id && state.token && newDbId && exerciseIndex !== -1) {
@@ -520,17 +538,37 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 15, fontWeight: 600, color: '#1A1A2E', textTransform: 'capitalize' }}>{e.exerciseName || e.name}</span>
+                      <span className="badge neutral" style={{ fontSize: 10, padding: '2px 8px' }}>{e.muscleGroup || e.targetMuscle}</span>
                       {sub && <span className="badge amber" style={{ fontSize: 10, padding: '2px 8px' }}>Substituted</span>}
                       {added && <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#DBEAFE', color: '#1D4ED8' }}>Added</span>}
-                      <span className="badge neutral" style={{ fontSize: 10, padding: '2px 8px' }}>{e.muscleGroup || e.targetMuscle}</span>
                     </div>
                     <div style={{ fontSize: 12, color: '#8A8A85', marginBottom: 3 }}>
                       {Array.isArray(e.sets) ? e.sets.length : (e.sets || 3)} × {e.reps || (Array.isArray(e.sets) && e.sets[0]?.plannedReps) || '10-12'} × {e.weight || (Array.isArray(e.sets) && e.sets[0]?.plannedWeight) || 0}kg
                     </div>
                     <div style={{ fontSize: 11, color: (sub || added) ? '#8A8A85' : '#3A7A0A' }}>{sub ? `Was: ${e.was} · swapped by you` : (added ? 'Added manually by you' : e.why)}</div>
                   </div>
-                  <i className="ti ti-chevron-down" style={{ color: '#8A8A85', fontSize: 18, flex: 'none' }} />
+                  <i className={`ti ti-chevron-${expandedCards[e.id] ? 'up' : 'down'}`} style={{ color: '#8A8A85', fontSize: 18, flex: 'none', cursor: 'pointer', padding: 10, margin: -10 }} onClick={() => toggleCard(e.id)} />
                 </div>
+                                {/* --- EXPANDED DETAILS PANEL --- */}
+                {expandedCards[e.id] && (
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #EDEDEA' }}>
+                    <p style={{ fontSize: 13, color: '#3A7A0A', margin: '0 0 8px 0' }}>
+                      {e.exerciseId?.whyLabel || 'Builds strength and endurance'}
+                    </p>
+                    <p style={{ fontSize: 13, margin: '0 0 4px 0' }}>
+                      <strong>Target Muscle:</strong> {e.exerciseId?.targetMuscle || e.targetMuscle || e.muscleGroup}
+                    </p>
+                    <p style={{ fontSize: 13, margin: '0 0 12px 0' }}>
+                      <strong>Secondary Muscles:</strong> {e.exerciseId?.secondaryMuscles?.join(', ') || 'N/A'}
+                    </p>
+                    
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#8A8A85', letterSpacing: '.05em' }}>INSTRUCTIONS</span>
+                    <div style={{ fontSize: 13, marginTop: 6, marginBottom: 0, color: '#1A1A2E', whiteSpace: 'pre-line', lineHeight: 1.5 }}>
+                      {e.exerciseId?.instructionsEn || 'Detailed instructions will appear here once linked.'}
+                    </div>
+                  </div>
+                )}
+                {/* --- END EXPANDED DETAILS PANEL --- */}
                 <div style={{ display: 'flex', gap: 8, marginTop: 11, paddingTop: 11, borderTop: '1px solid #EDEDEA' }}>
                   <div onClick={() => setPickerFor(e.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 9, padding: 8, fontSize: 12, fontWeight: 500, color: '#1A1A2E', background: '#F5F5F3', cursor: 'pointer' }}><i className="ti ti-repeat" style={{ fontSize: 14 }} /> Substitute</div>
                   <div onClick={() => skipExercise(e.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 9, padding: 8, fontSize: 12, fontWeight: 500, color: '#8A8A85', background: '#F5F5F3', cursor: 'pointer' }}><i className="ti ti-player-skip-forward" style={{ fontSize: 14 }} /> Skip</div>
@@ -558,8 +596,15 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
       {pickerFor && (
         <SubstituteSheet 
           exerciseDbId={activeW?.exercises?.find(e => e.id === pickerFor)?.exerciseDbId || activeW?.exercises?.find(e => e.id === pickerFor)?.exerciseId} 
+          targetMuscle={activeW?.exercises?.find(e => e.id === pickerFor)?.muscleGroup}
+          wasSubstitutedFrom={rows.find(r => r.id === pickerFor)?.was}
           onClose={() => setPickerFor(null)} 
           onPick={(name, newDbId) => { substitute(pickerFor, name, newDbId); setPickerFor(null); }} 
+          onBrowse={(muscle) => { 
+            const exerciseIndex = rows.findIndex(r => r.id === pickerFor);
+            if (onSubstituteBrowse) onSubstituteBrowse(exerciseIndex, muscle);
+            setPickerFor(null);
+          }}
         />
       )}
       
@@ -684,7 +729,7 @@ export function ChangeDaySheet({ current, weeklyPlanSplit, onClose, onPick }) {
   );
 }
 
-function SubstituteSheet({ exerciseDbId, onClose, onPick }) {
+function SubstituteSheet({ exerciseDbId, targetMuscle, wasSubstitutedFrom, onClose, onPick, onBrowse }) {
   const { state } = useOnboarding();
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -695,7 +740,12 @@ function SubstituteSheet({ exerciseDbId, onClose, onPick }) {
       return;
     }
     
-    fetch(`${import.meta.env.VITE_API_URL || ''}/api/exercises/${exerciseDbId}/substitutes`, {
+    let url = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/exercises/${exerciseDbId}/substitutes`;
+    if (wasSubstitutedFrom) {
+      url += `?was=${encodeURIComponent(wasSubstitutedFrom)}`;
+    }
+    
+    fetch(url, {
       headers: { 'Authorization': `Bearer ${state.token}` }
     })
       .then(res => res.json())
@@ -726,10 +776,25 @@ function SubstituteSheet({ exerciseDbId, onClose, onPick }) {
             {options.map(o => (
               <div key={o._id} onClick={() => onPick(o.name, o._id)} style={{ background: '#fff', border: '1.5px solid #DDDDD9', borderRadius: 14, padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
                 <Thumb url={o.gifUrl} size={38} radius={10} />
-                <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: '#1A1A2E' }}>{o.name}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#1A1A2E', textTransform: 'capitalize' }}>{o.name}</span>
+                    {o.muscleGroup && (
+                      <span className="badge neutral" style={{ fontSize: 10, padding: '2px 8px' }}>
+                        {o.muscleGroup}
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <i className="ti ti-plus" style={{ color: '#1A1A2E', fontSize: 17 }} />
               </div>
             ))}
+          </div>
+        )}
+
+        {targetMuscle && (
+          <div onClick={() => onBrowse(targetMuscle)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: '14px 14px', fontSize: 14, fontWeight: 600, color: '#1A1A2E', background: '#F5F5F5', borderRadius: 14, cursor: 'pointer' }}>
+            Browse all {targetMuscle} exercises <i className="ti ti-arrow-right" style={{ fontSize: 16 }} />
           </div>
         )}
       </div>

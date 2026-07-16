@@ -24,6 +24,7 @@ export default function AppShell() {
   const [weeklyPlanSplit, setWeeklyPlanSplit] = useState([]);
   const [loading, setLoading] = useState(true);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [substituteContext, setSubstituteContext] = useState(null);
   const [refreshDiet, setRefreshDiet] = useState(0);
 
 
@@ -96,10 +97,12 @@ export default function AppShell() {
                 exerciseDbId: e.exerciseId?._id,
                 name: e.exerciseId?.name || e.exerciseName || 'Unknown Exercise',
                 muscleGroup: e.exerciseId?.muscleGroup || e.muscleGroup || '',
+                exerciseId: e.exerciseId,
                 targetMuscle: e.exerciseId?.targetMuscle || '',
                 gifUrl: e.exerciseId?.gifUrl || '',
                 equipment: e.exerciseId?.equipment || '',
                 whyLabel: e.exerciseId?.whyLabel || e.benefits || '',
+                secondaryMuscles: e.exerciseId?.secondaryMuscles || [],
                 wasSubstituted: e.wasSubstituted || false,
                 substitutedFrom: e.substitutedFrom || '',
                 wasSkipped: e.wasSkipped || false,
@@ -210,15 +213,32 @@ export default function AppShell() {
     }
   };
 
+  const handleSubstituteExercise = async (exerciseIndex, newExerciseId) => {
+    if (!workout || !workout._id) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${workout._id}/substitute-exercise`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+        body: JSON.stringify({ exerciseIndex, newExerciseId })
+      });
+      if (res.ok) {
+        fetchWorkoutByOffset(0);
+      }
+    } catch (err) {
+      console.error("Failed to substitute exercise", err);
+    }
+  };
+
   let overlay = null;
-  if (top === 'plan') overlay = <WorkoutPlan workout={workout} weeklyPlanSplit={weeklyPlanSplit} onBack={pop} onStart={() => replace('active')} onAddExercise={() => { setBrowserMuscle('All'); push('browser'); }} refreshWorkout={() => fetchWorkoutByOffset(0)} />;
+  if (top === 'plan') overlay = <WorkoutPlan workout={workout} weeklyPlanSplit={weeklyPlanSplit} onBack={pop} onStart={() => replace('active')} onAddExercise={() => { setBrowserMuscle('All'); push('browser'); }} onSubstituteBrowse={(index, muscle) => { setBrowserMuscle(muscle); setSubstituteContext({ index }); push('browser'); }} refreshWorkout={() => fetchWorkoutByOffset(0)} />;
   if (top === 'modify_plan') overlay = <WorkoutPlan 
     workout={workout} 
     weeklyPlanSplit={weeklyPlanSplit} 
     onBack={() => { fetchWorkoutByOffset(0); pop(); }} 
     onStart={() => {}} 
     onAddExercise={() => { setBrowserMuscle('All'); push('browser'); }} 
-    refreshWorkout={() => fetchWorkoutByOffset(0)} 
+    onSubstituteBrowse={(index, muscle) => { setBrowserMuscle(muscle); setSubstituteContext({ index }); push('browser'); }}
+    refreshWorkout={() => fetchWorkoutByOffset(1)} 
     isModifyMode={true} 
   />;
   if (top === 'active') overlay = <ActiveWorkout workout={workout} onBack={pop} onFinish={() => replace('post')} onSwap={(muscle) => { setBrowserMuscle(muscle || 'All'); push('browser'); }} />;
@@ -234,7 +254,15 @@ export default function AppShell() {
   />;
   if (top === 'food') overlay = <FoodPhoto photo={capturedPhoto} onBack={() => { setCapturedPhoto(null); pop(); }} onConfirm={() => { setCapturedPhoto(null); pop(); setRefreshDiet(k => k + 1); }} />;
   if (top === 'circle') overlay = <Circle onBack={pop} />;
-  if (top === 'browser') overlay = <ExerciseBrowser onClose={pop} initialFilter={browserMuscle} onAdd={handleAddExercise} />;
+  if (top === 'browser') overlay = <ExerciseBrowser onClose={() => { setSubstituteContext(null); pop(); }} initialFilter={browserMuscle} onAdd={(exercise) => {
+    if (substituteContext) {
+      handleSubstituteExercise(substituteContext.index, exercise._id);
+      setSubstituteContext(null);
+      pop();
+    } else {
+      handleAddExercise(exercise);
+    }
+  }} />;
   if (top === 'profile') overlay = <Profile onBack={pop} />;
 
   let tabScreen;
