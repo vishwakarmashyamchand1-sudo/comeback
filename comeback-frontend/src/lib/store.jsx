@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useReducer } from 'react';
 import { auth } from './firebase.js';
 import { onIdTokenChanged, signOut } from 'firebase/auth';
+import { API_URL } from './api.js';
 
 const STORAGE_KEY = 'comeback.onboarding.v1';
 
@@ -92,8 +93,7 @@ export function OnboardingProvider({ children }) {
           const freshToken = await user.getIdToken();
           
           try {
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const res = await fetch(`${apiUrl}/api/auth/me`, {
+            const res = await fetch(`${API_URL}/api/auth/me`, {
               headers: { 'Authorization': `Bearer ${freshToken}` }
             });
             const data = await res.json();

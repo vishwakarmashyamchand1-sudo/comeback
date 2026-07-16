@@ -33,8 +33,8 @@ export default function Step1({ onNext, onBack, onSkip, dir }) {
         sub="Your coach needs this to build the right plan for you." />
 
       <SectionLabel>Your name</SectionLabel>
-      <TextField value={p.name || ''} onChange={() => {}} readOnly={true}
-        placeholder="Loading..." />
+      <TextField value={p.name || ''} onChange={v => set({ name: v })} 
+        placeholder="Enter your name" />
 
       <SectionLabel>Gender</SectionLabel>
       <div className="gender-row">
