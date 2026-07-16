@@ -82,7 +82,7 @@ const getTodayWorkout = asyncHandler(async (req, res) => {
   const workout = await Workout.findOne({
     userId: user._id,
     date: today
-  }).populate('exercises.exerciseId', 'name equipment targetMuscle gifUrl whyLabel');
+  }).populate('exercises.exerciseId', 'name equipment targetMuscle secondaryMuscles instructionsEn gifUrl whyLabel');
 
   // Robust fallback: if user.weeklyPlanSplit is empty, extract it from the actual workouts for this week
   let activeSplit = user.weeklyPlanSplit || [];
@@ -163,7 +163,7 @@ const getWorkoutByOffset = asyncHandler(async (req, res) => {
   const workout = await Workout.findOne({
     userId: user._id,
     date: targetDate
-  }).populate('exercises.exerciseId', 'name equipment targetMuscle gifUrl whyLabel');
+  }).populate('exercises.exerciseId', 'name equipment targetMuscle secondaryMuscles instructionsEn gifUrl whyLabel');
 
   let activeSplit = user.weeklyPlanSplit || [];
   if (activeSplit.length === 0) {
@@ -360,7 +360,7 @@ const getWorkoutById = asyncHandler(async (req, res) => {
   const workout = await Workout.findOne({ 
     _id: req.params.id, 
     userId: req.user._id 
-  }).populate('exercises.exerciseId', 'name equipment targetMuscle gifUrl');
+  }).populate('exercises.exerciseId', 'name equipment targetMuscle secondaryMuscles instructionsEn gifUrl whyLabel');
 
   if (!workout) {
     res.status(404);

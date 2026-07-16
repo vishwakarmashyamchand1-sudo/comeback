@@ -201,6 +201,9 @@ function Metric({ label, val, target, value, max }) {
 export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddExercise, refreshWorkout, isModifyMode }) {
   const { state } = useOnboarding();
   const w = workout || todayWorkout;
+
+  const [expandedCards, setExpandedCards] = useState({});
+  const toggleCard = (id) => setExpandedCards(prev => ({...prev, [id]: !prev[id]}));
   
   const [pendingOverride, setPendingOverride] = useState(null);
   const activeW = pendingOverride || w;
@@ -430,17 +433,37 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 15, fontWeight: 600, color: '#1A1A2E', textTransform: 'capitalize' }}>{e.exerciseName || e.name}</span>
+                      <span className="badge neutral" style={{ fontSize: 10, padding: '2px 8px' }}>{e.muscleGroup || e.targetMuscle}</span>
                       {sub && <span className="badge amber" style={{ fontSize: 10, padding: '2px 8px' }}>Substituted</span>}
                       {added && <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#DBEAFE', color: '#1D4ED8' }}>Added</span>}
-                      <span className="badge neutral" style={{ fontSize: 10, padding: '2px 8px' }}>{e.muscleGroup || e.targetMuscle}</span>
                     </div>
                     <div style={{ fontSize: 12, color: '#8A8A85', marginBottom: 3 }}>
                       {Array.isArray(e.sets) ? e.sets.length : (e.sets || 3)} × {e.reps || (Array.isArray(e.sets) && e.sets[0]?.plannedReps) || '10-12'} × {e.weight || (Array.isArray(e.sets) && e.sets[0]?.plannedWeight) || 0}kg
                     </div>
                     <div style={{ fontSize: 11, color: (sub || added) ? '#8A8A85' : '#3A7A0A' }}>{sub ? `Was: ${e.was} · swapped by you` : (added ? 'Added manually by you' : e.why)}</div>
                   </div>
-                  <i className="ti ti-chevron-down" style={{ color: '#8A8A85', fontSize: 18, flex: 'none' }} />
+                  <i className={`ti ti-chevron-${expandedCards[e.id] ? 'up' : 'down'}`} style={{ color: '#8A8A85', fontSize: 18, flex: 'none', cursor: 'pointer', padding: 10, margin: -10 }} onClick={() => toggleCard(e.id)} />
                 </div>
+                                {/* --- EXPANDED DETAILS PANEL --- */}
+                {expandedCards[e.id] && (
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #EDEDEA' }}>
+                    <p style={{ fontSize: 13, color: '#3A7A0A', margin: '0 0 8px 0' }}>
+                      {e.exerciseId?.whyLabel || 'Builds strength and endurance'}
+                    </p>
+                    <p style={{ fontSize: 13, margin: '0 0 4px 0' }}>
+                      <strong>Target Muscle:</strong> {e.exerciseId?.targetMuscle || e.targetMuscle || e.muscleGroup}
+                    </p>
+                    <p style={{ fontSize: 13, margin: '0 0 12px 0' }}>
+                      <strong>Secondary Muscles:</strong> {e.exerciseId?.secondaryMuscles?.join(', ') || 'N/A'}
+                    </p>
+                    
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#8A8A85', letterSpacing: '.05em' }}>INSTRUCTIONS</span>
+                    <div style={{ fontSize: 13, marginTop: 6, marginBottom: 0, color: '#1A1A2E', whiteSpace: 'pre-line', lineHeight: 1.5 }}>
+                      {e.exerciseId?.instructionsEn || 'Detailed instructions will appear here once linked.'}
+                    </div>
+                  </div>
+                )}
+                {/* --- END EXPANDED DETAILS PANEL --- */}
                 <div style={{ display: 'flex', gap: 8, marginTop: 11, paddingTop: 11, borderTop: '1px solid #EDEDEA' }}>
                   <div onClick={() => setPickerFor(e.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 9, padding: 8, fontSize: 12, fontWeight: 500, color: '#1A1A2E', background: '#F5F5F3', cursor: 'pointer' }}><i className="ti ti-repeat" style={{ fontSize: 14 }} /> Substitute</div>
                   <div onClick={() => skipExercise(e.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 9, padding: 8, fontSize: 12, fontWeight: 500, color: '#8A8A85', background: '#F5F5F3', cursor: 'pointer' }}><i className="ti ti-player-skip-forward" style={{ fontSize: 14 }} /> Skip</div>
