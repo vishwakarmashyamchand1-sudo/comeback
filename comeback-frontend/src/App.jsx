@@ -12,8 +12,7 @@ import Step4 from './screens/Step4.jsx';
 import Step5 from './screens/Step5.jsx';
 import Generating from './screens/Generating.jsx';
 import Auth from './screens/Auth.jsx';
-import { auth } from './lib/firebase.js';
-import { signOut } from 'firebase/auth';
+
 
 import { API_URL } from './lib/api.js';
 
