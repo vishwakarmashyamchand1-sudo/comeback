@@ -10,6 +10,8 @@ import Step4 from './screens/Step4.jsx';
 import Step5 from './screens/Step5.jsx';
 import Generating from './screens/Generating.jsx';
 import Auth from './screens/Auth.jsx';
+import { auth } from './lib/firebase.js';
+import { signOut } from 'firebase/auth';
 
 import { API_URL } from './lib/api.js';
 
@@ -107,8 +109,13 @@ export default function App({ onEnterApp }) {
     
     step < 5 ? go(step + 1) : dispatch({ type: 'next', step: 'generating' });
   };
-  const back = () => {
-    window.history.back();
+  const back = async () => {
+    if (step === 1) {
+      await signOut(auth);
+      dispatch({ type: 'logout' });
+    } else {
+      window.history.back();
+    }
   };
 
   const skip = () => next();

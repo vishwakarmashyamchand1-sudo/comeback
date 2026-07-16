@@ -20,6 +20,13 @@ const createUser = asyncHandler(async (req, res) => {
   
   // 2. If yes — this is a re-login, not a new user. Return the existing user with isNewUser: false.
   if (existingUser) {
+    // RACE CONDITION FIX: If /me auto-created the user first, it used the fallback name "Athlete".
+    // We need to update it with their real name from the registration form before returning!
+    if (name && (!existingUser.name || existingUser.name === 'Athlete')) {
+      existingUser.name = name;
+      await existingUser.save();
+    }
+
     return res.status(200).json({
       success: true,
       message: 'User logged in successfully',

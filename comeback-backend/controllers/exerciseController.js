@@ -267,6 +267,7 @@ const filterExercises = asyncHandler(async (req, res) => {
 const getExerciseSubstitutes = asyncHandler(async (req, res) => {
   const mongoose = require('mongoose');
   const { id } = req.params;
+  const { was } = req.query;
 
   let exercise = await Exercise.findOne({ sourceId: id, isActive: true });
   if (!exercise && mongoose.Types.ObjectId.isValid(id)) {
@@ -280,15 +281,29 @@ const getExerciseSubstitutes = asyncHandler(async (req, res) => {
   }
 
   const limitNum = 4;
+  let substitutes = [];
+
+  if (was) {
+    // Use a case-insensitive regex to find the original exercise, just in case of casing mismatches
+    const originalExercise = await Exercise.findOne({ 
+      name: new RegExp(`^${was.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+    }).select('name gifUrl whyLabel equipment muscleGroup');
+    if (originalExercise) {
+      substitutes.push(originalExercise);
+    }
+  }
   
-  // Find up to 4 exercises with the exact same target muscle, excluding the original exercise
-  const substitutes = await Exercise.find({
-    targetMuscle: exercise.targetMuscle,
+  // Find up to 4 exercises with the exact same muscle group, excluding the original exercise
+  const otherSubstitutes = await Exercise.find({
+    muscleGroup: exercise.muscleGroup,
     _id: { $ne: exercise._id },
+    name: { $ne: was },
     isActive: true
   })
     .select('name gifUrl whyLabel equipment muscleGroup')
-    .limit(limitNum);
+    .limit(limitNum - substitutes.length);
+
+  substitutes = [...substitutes, ...otherSubstitutes];
 
   res.status(200).json({
     success: true,

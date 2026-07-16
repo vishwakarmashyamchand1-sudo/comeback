@@ -26,7 +26,7 @@ export default function Step1({ onNext, onBack, onSkip, dir }) {
 
   return (
     <div className={`screen anim-${dir}`}>
-      <ObHeader step={1} onBack={null} onSkip={onSkip} canSkip={false} />
+      <ObHeader step={1} onBack={onBack} onSkip={onSkip} canSkip={false} />
       <ProgressSteps current={1} />
       <StepIntro icon="ruler" tag="About you"
         title="Let's start with<br>the basics"
