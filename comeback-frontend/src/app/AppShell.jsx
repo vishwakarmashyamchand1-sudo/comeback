@@ -62,8 +62,8 @@ export default function AppShell() {
 
   const [browserMuscle, setBrowserMuscle] = useState('All');
 
-  const fetchWorkoutByOffset = (offset = 0) => {
-    setLoading(true);
+  const fetchWorkoutByOffset = (offset = 0, silent = false) => {
+    if (!silent) setLoading(true);
     const endpoint = offset === 0 ? '/api/workouts/today' : `/api/workouts/by-offset/${offset}`;
     
     fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${endpoint}`, {
@@ -106,7 +106,7 @@ export default function AppShell() {
         } else {
           setWorkout(todayWorkout);
         }
-        setLoading(false);
+        if (!silent) setLoading(false);
       })
       .catch(err => {
         console.error("Failed to fetch workout for offset", offset, ":", err);
@@ -202,7 +202,7 @@ export default function AppShell() {
   };
 
   let overlay = null;
-  if (top === 'plan') overlay = <WorkoutPlan workout={workout} weeklyPlanSplit={weeklyPlanSplit} onBack={pop} onStart={() => replace('active')} onAddExercise={() => { setBrowserMuscle('All'); push('browser'); }} refreshWorkout={() => fetchWorkoutByOffset(0)} />;
+  if (top === 'plan') overlay = <WorkoutPlan workout={workout} weeklyPlanSplit={weeklyPlanSplit} onBack={pop} onStart={() => push('active')} onFinish={() => replace('post')} onAddExercise={() => { setBrowserMuscle('All'); push('browser'); }} refreshWorkout={() => fetchWorkoutByOffset(0)} />;
   if (top === 'modify_plan') overlay = <WorkoutPlan 
     workout={workout} 
     weeklyPlanSplit={weeklyPlanSplit} 
@@ -212,9 +212,10 @@ export default function AppShell() {
     refreshWorkout={() => fetchWorkoutByOffset(1)} 
     isModifyMode={true} 
   />;
-  if (top === 'active') overlay = <ActiveWorkout workout={workout} onBack={pop} onFinish={() => replace('post')} onSwap={(muscle) => { setBrowserMuscle(muscle || 'All'); push('browser'); }} />;
+  if (top === 'active') overlay = <ActiveWorkout workout={workout} onBack={() => { fetchWorkoutByOffset(0, true); pop(); }} onFinish={() => replace('post')} onSwap={(muscle) => { setBrowserMuscle(muscle || 'All'); push('browser'); }} />;
   if (top === 'post') overlay = <PostSession 
     workout={workout} 
+    isCompleted={workoutDone || workout?.status === 'completed'}
     onDone={() => { setWorkoutDone(true); reset(); fetchWorkoutByOffset(0); }} 
     onModify={() => { 
       setWorkoutDone(true); 

@@ -198,7 +198,7 @@ function Metric({ label, val, target, value, max }) {
 }
 
 /* ─────────────────────────── WORKOUT PLAN ────────────────── */
-export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddExercise, refreshWorkout, isModifyMode }) {
+export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinish, onAddExercise, refreshWorkout, isModifyMode }) {
   const { state } = useOnboarding();
   const w = workout || todayWorkout;
   
@@ -216,6 +216,10 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
   const [dayOpen, setDayOpen] = useState(false);
   const [dayType, setDayType] = useState(activeW.sessionType || activeW.type || 'Full Body');
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const hasProgress = activeW.exercises && activeW.exercises.some(e => 
+    e.actualSetsArray && e.actualSetsArray.some(s => s.completed)
+  );
 
   useEffect(() => {
     setRows((activeW.exercises || []).map(e => ({ 
@@ -374,7 +378,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
         
         <div className="sticky-cta">
           {isModifyMode ? (
-            <button className="btn btn-primary" onClick={pendingOverride ? confirmOverride : onBack}>Reviewed <i className="ti ti-check btn-icon" /></button>
+            <button className="btn btn-primary" onClick={pendingOverride ? confirmOverride : onBack}>Done plan <i className="ti ti-check btn-icon" /></button>
           ) : (
             <button className="btn btn-primary" onClick={onStart || onBack}>Got it <i className="ti ti-check btn-icon" /></button>
           )}
@@ -430,9 +434,20 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 15, fontWeight: 600, color: '#1A1A2E', textTransform: 'capitalize' }}>{e.exerciseName || e.name}</span>
-                      {sub && <span className="badge amber" style={{ fontSize: 10, padding: '2px 8px' }}>Substituted</span>}
-                      {added && <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#DBEAFE', color: '#1D4ED8' }}>Added</span>}
-                      <span className="badge neutral" style={{ fontSize: 10, padding: '2px 8px' }}>{e.muscleGroup || e.targetMuscle}</span>
+                      {hasProgress && (
+                        e.actualSetsArray && e.actualSetsArray.some(s => s.completed) ? (
+                          e.actualSetsArray.every(s => s.completed) ? (
+                            <span className="badge" style={{ background: '#EDFCD2', color: '#3A7A0A', fontSize: 10, padding: '2px 8px' }}>Completed</span>
+                          ) : (
+                            <span className="badge" style={{ background: '#FFEDD5', color: '#C2410C', fontSize: 10, padding: '2px 8px' }}>Partially completed</span>
+                          )
+                        ) : (
+                          <span className="badge" style={{ background: '#EAEAE6', color: '#8A8A85', fontSize: 10, padding: '2px 8px' }}>Skipped</span>
+                        )
+                      )}
+                      {sub && !hasProgress && <span className="badge amber" style={{ fontSize: 10, padding: '2px 8px' }}>Substituted</span>}
+                      {added && !hasProgress && <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#DBEAFE', color: '#1D4ED8' }}>Added</span>}
+                      {!hasProgress && <span className="badge neutral" style={{ fontSize: 10, padding: '2px 8px' }}>{e.muscleGroup || e.targetMuscle}</span>}
                     </div>
                     <div style={{ fontSize: 12, color: '#8A8A85', marginBottom: 3 }}>
                       {Array.isArray(e.sets) ? e.sets.length : (e.sets || 3)} × {e.reps || (Array.isArray(e.sets) && e.sets[0]?.plannedReps) || '10-12'} × {e.weight || (Array.isArray(e.sets) && e.sets[0]?.plannedWeight) || 0}kg
@@ -441,15 +456,19 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
                   </div>
                   <i className="ti ti-chevron-down" style={{ color: '#8A8A85', fontSize: 18, flex: 'none' }} />
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 11, paddingTop: 11, borderTop: '1px solid #EDEDEA' }}>
-                  <div onClick={() => setPickerFor(e.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 9, padding: 8, fontSize: 12, fontWeight: 500, color: '#1A1A2E', background: '#F5F5F3', cursor: 'pointer' }}><i className="ti ti-repeat" style={{ fontSize: 14 }} /> Substitute</div>
-                  <div onClick={() => skipExercise(e.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 9, padding: 8, fontSize: 12, fontWeight: 500, color: '#8A8A85', background: '#F5F5F3', cursor: 'pointer' }}><i className="ti ti-player-skip-forward" style={{ fontSize: 14 }} /> Skip</div>
-                </div>
+                {!hasProgress && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 11, paddingTop: 11, borderTop: '1px solid #EDEDEA' }}>
+                    <div onClick={() => setPickerFor(e.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 9, padding: 8, fontSize: 12, fontWeight: 500, color: '#1A1A2E', background: '#F5F5F3', cursor: 'pointer' }}><i className="ti ti-repeat" style={{ fontSize: 14 }} /> Substitute</div>
+                    <div onClick={() => skipExercise(e.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 9, padding: 8, fontSize: 12, fontWeight: 500, color: '#8A8A85', background: '#F5F5F3', cursor: 'pointer' }}><i className="ti ti-player-skip-forward" style={{ fontSize: 14 }} /> Skip</div>
+                  </div>
+                )}
               </div>
             );
           })}
           {/* prominent add exercise */}
-          <div onClick={onAddExercise} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: '1.5px dashed #1A1A2E', borderRadius: 16, padding: 15, fontSize: 14, fontWeight: 600, color: '#1A1A2E', background: '#fff', cursor: 'pointer' }}><i className="ti ti-plus" style={{ fontSize: 17 }} /> Add exercise</div>
+          {!hasProgress && (
+            <div onClick={onAddExercise} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: '1.5px dashed #1A1A2E', borderRadius: 16, padding: 15, fontSize: 14, fontWeight: 600, color: '#1A1A2E', background: '#fff', cursor: 'pointer' }}><i className="ti ti-plus" style={{ fontSize: 17 }} /> Add exercise</div>
+          )}
         </div>
       </div>
       <div className="sticky-cta">
@@ -458,9 +477,20 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onAddEx
           <span style={{ color: '#8A8A85' }}>Coach-balanced ✓</span>
         </div>
         {isModifyMode ? (
-          <button className="btn btn-primary" onClick={pendingOverride ? confirmOverride : onBack}>Reviewed <i className="ti ti-check btn-icon" /></button>
+          <button className="btn btn-primary" onClick={pendingOverride ? confirmOverride : onBack}>Done plan <i className="ti ti-check btn-icon" /></button>
+        ) : hasProgress ? (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn" style={{ flex: 1, background: '#F5F5F3', color: '#1A1A2E', fontWeight: 600 }} onClick={onStart}>
+              Resume <i className="ti ti-player-play btn-icon" style={{ fill: '#1A1A2E', color: '#1A1A2E' }} />
+            </button>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={onFinish}>
+              Finish workout <i className="ti ti-flag-check btn-icon" />
+            </button>
+          </div>
         ) : (
-          <button className="btn btn-primary" onClick={onStart}>Start workout <i className="ti ti-arrow-right btn-icon" /></button>
+          <button className="btn btn-primary" onClick={onStart}>
+            Start workout <i className="ti ti-player-play btn-icon" style={{ fill: '#fff' }} />
+          </button>
         )}
       </div>
 
@@ -670,33 +700,40 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
       }, 50);
     }
 
-    // API Call to log-set
-    if (w._id && state.token) {
-      try {
-        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/log-set`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${state.token}`
-          },
-          body: JSON.stringify({
-            exerciseIndex: ex.originalIndex,
-            setIndex: si,
-            actualReps: Number(finalReps) || 0,
-            actualWeight: Number(finalWeight) || 0,
-            completed: isDoneNow
-          })
-        });
-      } catch (err) {
-        console.error('Failed to log set:', err);
-      }
-    }
+    // API Call is deferred to the "Complete exercise" button (`next()`)
   };
 
   const last = idx === activeExercises.length - 1;
-  const next = () => { 
+  const next = async () => { 
     setSkipReason('');
-    if (last) onFinish(); else setIdx(i => i + 1); 
+    
+    // API Call to log the entire exercise
+    if (w._id && state.token) {
+      try {
+        // Loop through and call log-set sequentially for each set so there are no race conditions
+        for (let si = 0; si < cur.length; si++) {
+          const setObj = cur[si];
+          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/log-set`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${state.token}`
+            },
+            body: JSON.stringify({
+              exerciseIndex: ex.originalIndex,
+              setIndex: si,
+              actualReps: Number(setObj.reps) || 0,
+              actualWeight: Number(setObj.weight) || 0,
+              completed: !!setObj.done
+            })
+          });
+        }
+      } catch (err) {
+        console.error('Failed to log exercise:', err);
+      }
+    }
+
+    if (last) onBack(); else setIdx(i => i + 1); 
   };
   const nextEx = activeExercises[idx + 1];
 
@@ -724,9 +761,14 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
   return (
     <div className="app-body">
       <div style={{ flex: 'none', padding: '12px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <button className="icon-btn" onClick={onBack} aria-label="Back" style={{ marginLeft: -8 }}><i className="ti ti-arrow-left" /></button>
-          <div><div style={{ fontSize: 16, fontWeight: 600, color: '#1A1A2E' }}>{w.type}</div><div style={{ fontSize: 12, color: '#8A8A85', marginTop: 1 }}>{idx + (cur.every(s => s.done) ? 1 : 0)} of {activeExercises.length} exercises done</div></div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="icon-btn" onClick={() => { if (idx > 0) setIdx(idx - 1); else onBack(); }} aria-label="Back" style={{ marginLeft: -8 }}><i className="ti ti-arrow-left" /></button>
+            <div><div style={{ fontSize: 16, fontWeight: 600, color: '#1A1A2E' }}>{w.type}</div><div style={{ fontSize: 12, color: '#8A8A85', marginTop: 1 }}>{idx + (cur.some(s => s.done) ? 1 : 0)} of {activeExercises.length} exercises done</div></div>
+          </div>
+          {idx < activeExercises.length - 1 && (
+            <button className="icon-btn" onClick={() => setIdx(idx + 1)} aria-label="Next" style={{ marginRight: -8 }}><i className="ti ti-arrow-right" /></button>
+          )}
         </div>
         <div className="bar" style={{ height: 5 }}><i style={{ width: `${(idx / activeExercises.length) * 100}%`, background: '#C8F25C' }} /></div>
       </div>
@@ -800,12 +842,12 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
 
       <div className="sticky-cta">
         <button 
-          className={`btn ${last ? 'btn-lime' : 'btn-primary'}`} 
+          className="btn btn-primary" 
           onClick={next}
-          disabled={!cur.every(s => s.done)}
-          style={{ opacity: cur.every(s => s.done) ? 1 : 0.5, pointerEvents: cur.every(s => s.done) ? 'auto' : 'none' }}
+          disabled={last ? false : !cur.some(s => s.done)}
+          style={{ opacity: (last || cur.some(s => s.done)) ? 1 : 0.5, pointerEvents: (last || cur.some(s => s.done)) ? 'auto' : 'none' }}
         >
-          {last ? <>Finish workout <i className="ti ti-flag-check btn-icon" /></> : <>Complete exercise <i className="ti ti-arrow-right btn-icon" /></>}
+          {last ? <>Done workout <i className="ti ti-flag-check btn-icon" /></> : <>Complete exercise <i className="ti ti-arrow-right btn-icon" /></>}
         </button>
       </div>
     </div>
@@ -813,11 +855,11 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
 }
 
 /* ─────────────────────────── POST SESSION ────────────────── */
-export function PostSession({ workout, onDone, onModify }) {
+export function PostSession({ workout, isCompleted, onDone, onModify }) {
   const { state } = useOnboarding();
-  const [phase, setPhase] = useState(workout.status === 'completed' ? 'loading' : 'rate'); // rate | loading | summary | confirming
-  const [rating, setRating] = useState(8);
-  const [feel, setFeel] = useState('Good');
+  const [phase, setPhase] = useState(isCompleted ? 'loading' : 'rate'); // rate | loading | summary | confirming
+  const [rating, setRating] = useState(null);
+  const [feel, setFeel] = useState(null);
   
   const [duration, setDuration] = useState('');
   
@@ -828,7 +870,7 @@ export function PostSession({ workout, onDone, onModify }) {
 
   // Fetch summary if already completed
   useEffect(() => {
-    if (workout.status === 'completed' && state.token) {
+    if (isCompleted && state.token) {
       const fetchExistingSummary = async () => {
         try {
           const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${workout._id}/summary`, {
@@ -852,6 +894,10 @@ export function PostSession({ workout, onDone, onModify }) {
   }, [workout.status, workout._id, state.token]);
 
   const submitCompletion = async () => {
+    if (!rating || !feel) {
+      alert("Please select a rating and how the session felt.");
+      return;
+    }
     if (!duration || isNaN(Number(duration)) || Number(duration) <= 0) {
       alert("Please enter a valid workout duration in minutes.");
       return;
@@ -1017,14 +1063,22 @@ export function PostSession({ workout, onDone, onModify }) {
               <div style={{ fontSize: 12, color: '#8A8A85' }}>+ {tomorrow.exercises.length - 3} more</div>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-primary" style={{ flex: 1, padding: 13, fontSize: 13, opacity: phase === 'confirming' ? 0.7 : 1 }} onClick={confirmAndFinish} disabled={phase === 'confirming'}>
-              {phase === 'confirming' ? 'Saving...' : <><span style={{ marginRight: 6 }}>Looks good</span> <i className="ti ti-check" /></>}
-            </button>
-            <button className="btn" style={{ flex: 1, padding: 13, fontSize: 13, background: '#fff', border: '1.5px solid #1A1A2E', color: '#1A1A2E', opacity: phase === 'confirming' ? 0.7 : 1 }} onClick={() => confirmAndFinish(true)} disabled={phase === 'confirming'}>
-              {phase === 'confirming' ? 'Saving...' : 'Modify plan'}
-            </button>
-          </div>
+          {isCompleted ? (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-primary" style={{ flex: 1, padding: 13, fontSize: 13 }} onClick={onDone}>
+                Back to Dashboard
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-primary" style={{ flex: 1, padding: 13, fontSize: 13, opacity: phase === 'confirming' ? 0.7 : 1 }} onClick={confirmAndFinish} disabled={phase === 'confirming'}>
+                {phase === 'confirming' ? 'Saving...' : <><span style={{ marginRight: 6 }}>Looks good</span> <i className="ti ti-check" /></>}
+              </button>
+              <button className="btn" style={{ flex: 1, padding: 13, fontSize: 13, background: '#fff', border: '1.5px solid #1A1A2E', color: '#1A1A2E', opacity: phase === 'confirming' ? 0.7 : 1 }} onClick={() => confirmAndFinish(true)} disabled={phase === 'confirming'}>
+                {phase === 'confirming' ? 'Saving...' : 'Modify plan'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

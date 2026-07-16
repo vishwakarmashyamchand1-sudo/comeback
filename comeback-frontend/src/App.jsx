@@ -194,7 +194,7 @@ export default function App({ onEnterApp }) {
     }[step];
   }
 
-  const dark = step === 'generating' || !state.isAuthenticated;
+  const dark = step === 'generating';
 
   return (
     <div className="app-shell" style={dark ? { background: '#1A1A2E' } : undefined}>

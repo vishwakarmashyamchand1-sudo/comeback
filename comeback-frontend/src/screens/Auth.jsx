@@ -105,10 +105,7 @@ export default function Auth() {
       </div>
 
       <StepIntro 
-        icon={isLogin ? 'login' : 'user-plus'} 
-        tag="Authentication"
         title={isLogin ? "Welcome back" : "Create account"}
-        sub={isLogin ? "Log in to view your dashboard or continue onboarding." : "Sign up to generate your custom AI plan."} 
       />
 
       <div style={{ marginTop: '10px' }}>
