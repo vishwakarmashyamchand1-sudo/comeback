@@ -641,9 +641,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinis
             );
           })}
           {/* prominent add exercise */}
-          {!hasProgress && (
-            <div onClick={onAddExercise} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: '1.5px dashed #1A1A2E', borderRadius: 16, padding: 15, fontSize: 14, fontWeight: 600, color: '#1A1A2E', background: '#fff', cursor: 'pointer' }}><i className="ti ti-plus" style={{ fontSize: 17 }} /> Add exercise</div>
-          )}
+          <div onClick={onAddExercise} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: '1.5px dashed #1A1A2E', borderRadius: 16, padding: 15, fontSize: 14, fontWeight: 600, color: '#1A1A2E', background: '#fff', cursor: 'pointer', marginTop: 12 }}><i className="ti ti-plus" style={{ fontSize: 17 }} /> Add exercise</div>
         </div>
       </div>
       <div className="sticky-cta">
@@ -885,6 +883,7 @@ function SubstituteSheet({ exerciseDbId, targetMuscle, wasSubstitutedFrom, onClo
 export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
   const { state } = useOnboarding();
   const [idx, setIdx] = useState(0);
+  const [sets, setSets] = useState(() => (workout?.exercises || []).map(e => e.actualSetsArray?.map(s => ({ reps: s.actualReps || '', weight: s.actualWeight || '', done: !!s.completed })) || Array.from({ length: e.sets }, () => ({ reps: '', weight: '', done: false }))));
   const [skipReason, setSkipReason] = useState('');
   const w = workout || todayWorkout;
   const activeExercises = (w.exercises || []).map((e, i) => ({ ...e, originalIndex: i })).filter(e => !e.wasSkipped);
@@ -901,13 +900,6 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
   }
 
   const ex = activeExercises[idx];
-  const [sets, setSets] = useState(() => activeExercises.map(e => {
-    if (e.actualSetsArray && Array.isArray(e.actualSetsArray)) {
-      return e.actualSetsArray.map(s => ({ reps: s.actualReps || '', weight: s.actualWeight || '', done: !!s.completed }));
-    }
-    return Array.from({ length: e.sets }, () => ({ reps: '', weight: '', done: false }));
-  }));
-
   const cur = sets[idx];
   const setField = (si, k, v) => setSets(prev => prev.map((rows, i) => i !== idx ? rows : rows.map((r, j) => j !== si ? r : { ...r, [k]: v })));
   
@@ -986,7 +978,7 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
       }
     }
 
-    if (last) onFinish(); else setIdx(i => i + 1); 
+    if (last) onBack(); else setIdx(i => i + 1); 
   };
   const nextEx = activeExercises[idx + 1];
 
@@ -1322,6 +1314,8 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
             ))}
           </div>
         )}
+
+
 
         <div className="card" style={{ borderRadius: 18, marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>

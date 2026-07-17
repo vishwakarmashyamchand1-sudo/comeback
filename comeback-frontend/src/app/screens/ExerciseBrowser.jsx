@@ -4,7 +4,7 @@ import { muscleFilters } from '../data.js'; // Keep the filter chips array
 import { API_URL } from '../../lib/api.js';
 import { useOnboarding } from '../../lib/store.jsx';
 
-export function ExerciseBrowser({ onClose, onAdd, initialFilter = 'All' }) {
+export function ExerciseBrowser({ onClose, onAdd, initialFilter = 'All', addLabel = 'Add to today' }) {
   const { state } = useOnboarding();
   const [filter, setFilter] = useState(initialFilter);
   const [searchQuery, setSearchQuery] = useState('');
@@ -233,7 +233,7 @@ export function ExerciseBrowser({ onClose, onAdd, initialFilter = 'All' }) {
               </div>
             </div>
             <div className="sticky-cta">
-              <button className="btn btn-primary" onClick={() => { onAdd && onAdd(detail); setDetail(null); onClose(); }}>Add to today <i className="ti ti-plus btn-icon" /></button>
+              <button className="btn btn-primary" onClick={() => { onAdd && onAdd(detail); setDetail(null); onClose(); }}>{addLabel} <i className="ti ti-plus btn-icon" /></button>
             </div>
           </div>
         </div>

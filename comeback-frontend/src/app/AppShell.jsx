@@ -253,7 +253,9 @@ export default function AppShell() {
   />;
   if (top === 'food') overlay = <FoodPhoto photo={capturedPhoto} onBack={() => { setCapturedPhoto(null); pop(); }} onConfirm={() => { setCapturedPhoto(null); pop(); setRefreshDiet(k => k + 1); }} />;
   if (top === 'circle') overlay = <Circle onBack={pop} />;
-  if (top === 'browser') overlay = <ExerciseBrowser onClose={() => { setSubstituteContext(null); pop(); }} initialFilter={browserMuscle} onAdd={(exercise) => {
+  if (top === 'browser') {
+    const isModifyTomorrow = stack.length >= 2 && stack[stack.length - 2] === 'modify_plan';
+    overlay = <ExerciseBrowser onClose={() => { setSubstituteContext(null); pop(); }} initialFilter={browserMuscle} addLabel={isModifyTomorrow ? "Add to tomorrow" : "Add to today"} onAdd={(exercise) => {
     if (substituteContext) {
       handleSubstituteExercise(substituteContext.index, exercise._id);
       setSubstituteContext(null);
@@ -262,6 +264,7 @@ export default function AppShell() {
       handleAddExercise(exercise);
     }
   }} />;
+  }
   if (top === 'profile') overlay = <Profile onBack={pop} />;
 
   let tabScreen;
