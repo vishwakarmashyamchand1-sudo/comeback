@@ -440,6 +440,71 @@ const logSet = asyncHandler(async (req, res) => {
     updatedSet: targetSet
   });
 });
+
+/**
+ * @desc    Log all sets for a specific exercise in real time
+ * @route   PATCH /api/workouts/:id/log-sets
+ * @access  Private
+ */
+const logSets = asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  const Workout = require('../models/Workout');
+
+  const { exerciseIndex, sets } = req.body;
+
+  if (exerciseIndex === undefined || !Array.isArray(sets)) {
+    res.status(400);
+    throw new Error('exerciseIndex and sets array are required');
+  }
+
+  const user = await User.findOne({ firebaseUid: req.user.firebaseUid });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const workout = await Workout.findOne({ _id: req.params.id, userId: user._id });
+  if (!workout) {
+    res.status(404);
+    throw new Error('Workout not found');
+  }
+
+  if (!workout.exercises[exerciseIndex]) {
+    res.status(400);
+    throw new Error('Invalid exerciseIndex');
+  }
+
+  const updatedSets = [];
+
+  for (const set of sets) {
+    const { setIndex, actualReps, actualWeight, completed } = set;
+    
+    if (workout.exercises[exerciseIndex].sets[setIndex]) {
+      const targetSet = workout.exercises[exerciseIndex].sets[setIndex];
+      
+      if (actualReps !== undefined) targetSet.actualReps = actualReps;
+      if (actualWeight !== undefined) targetSet.actualWeight = actualWeight;
+      if (completed !== undefined) targetSet.completed = completed;
+      
+      updatedSets.push(targetSet);
+    }
+  }
+
+  const allSetsDone = workout.exercises[exerciseIndex].sets.every(s => s.completed);
+  workout.exercises[exerciseIndex].isCompleted = allSetsDone;
+
+  if (workout.status === 'planned') {
+    workout.status = 'in_progress';
+  }
+
+  await workout.save();
+
+  res.status(200).json({
+    success: true,
+    updatedSets
+  });
+});
+
 /**
  * @desc    6. Add a user-selected exercise to the workout
  * @route   POST /api/workouts/:id/add-exercise
@@ -1296,6 +1361,7 @@ module.exports = {
   getWorkoutProgress,
   getWorkoutById,
   logSet,
+  logSets,
   addExercise,
   skipExercise,
   restoreExercise,
