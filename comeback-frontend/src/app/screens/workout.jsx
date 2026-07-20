@@ -3,6 +3,38 @@ import { Wordmark, Bar, CoachCard, Thumb, PushHeader, Sheet } from '../component
 import { todayWorkout, tomorrow, nutrition, circle, dayTypes } from '../data.js';
 import { useOnboarding } from '../../lib/store.jsx';
 
+function ExpandableInstruction({ text }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!text) return null;
+  
+  const isLong = text.length > 80 || text.split('\n').length > 2;
+  
+  return (
+    <div>
+      <div style={{
+        fontSize: 13, marginTop: 6, marginBottom: 0, color: '#1A1A2E', 
+        whiteSpace: 'pre-line', lineHeight: 1.5,
+        ...(expanded ? {} : {
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden'
+        })
+      }}>
+        {text}
+      </div>
+      {isLong && (
+        <div 
+          onClick={() => setExpanded(!expanded)} 
+          style={{ fontSize: 12, color: '#3B82F6', fontWeight: 600, cursor: 'pointer', marginTop: 4 }}
+        >
+          {expanded ? 'Read less' : 'Read more'}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─────────────────────────── DASHBOARD (Workout tab home) ── */
 export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle, goDiet, onOpenProfile, onChangeDay, weeklyPlanSplit, onFocusChange }) {
   const { state } = useOnboarding();
@@ -601,7 +633,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinis
                         )
                       )}
                       {sub && !hasProgress && <span className="badge amber" style={{ fontSize: 10, padding: '2px 8px' }}>Substituted</span>}
-                      {added && <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#DBEAFE', color: '#1D4ED8' }}>Newly added</span>}
+                      {added && <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#DBEAFE', color: '#1D4ED8' }}>Added</span>}
                       {!hasProgress && <span className="badge neutral" style={{ fontSize: 10, padding: '2px 8px' }}>{e.muscleGroup || e.targetMuscle}</span>}
                     </div>
                     <div style={{ fontSize: 12, color: '#8A8A85', marginBottom: 3 }}>
@@ -625,9 +657,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinis
                     </p>
                     
                     <span style={{ fontSize: 11, fontWeight: 600, color: '#8A8A85', letterSpacing: '.05em' }}>INSTRUCTIONS</span>
-                    <div style={{ fontSize: 13, marginTop: 6, marginBottom: 0, color: '#1A1A2E', whiteSpace: 'pre-line', lineHeight: 1.5 }}>
-                      {e.exerciseId?.instructionsEn || 'Detailed instructions will appear here once linked.'}
-                    </div>
+                    <ExpandableInstruction text={e.exerciseId?.instructionsEn || 'Detailed instructions will appear here once linked.'} />
                   </div>
                 )}
                 {/* --- END EXPANDED DETAILS PANEL --- */}
@@ -882,11 +912,24 @@ function SubstituteSheet({ exerciseDbId, targetMuscle, wasSubstitutedFrom, onClo
 /* ─────────────────────────── ACTIVE WORKOUT ──────────────── */
 export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
   const { state } = useOnboarding();
-  const [idx, setIdx] = useState(0);
-  const [sets, setSets] = useState(() => (workout?.exercises || []).map(e => e.actualSetsArray?.map(s => ({ reps: s.actualReps || '', weight: s.actualWeight || '', done: !!s.completed })) || Array.from({ length: e.sets }, () => ({ reps: '', weight: '', done: false }))));
-  const [skipReason, setSkipReason] = useState('');
   const w = workout || todayWorkout;
   const activeExercises = (w.exercises || []).map((e, i) => ({ ...e, originalIndex: i })).filter(e => !e.wasSkipped);
+
+  const [idx, setIdx] = useState(() => {
+    const firstPendingIdx = activeExercises.findIndex(e => {
+      const isDone = e.isCompleted || (Array.isArray(e.actualSetsArray) && e.actualSetsArray.length > 0 && e.actualSetsArray.every(s => s.completed));
+      return !isDone;
+    });
+    return firstPendingIdx !== -1 ? firstPendingIdx : 0;
+  });
+  
+  const [sets, setSets] = useState(() => 
+    activeExercises.map(e => 
+      e.actualSetsArray?.map(s => ({ reps: s.actualReps || '', weight: s.actualWeight || '', done: !!s.completed })) 
+      || Array.from({ length: e.sets || 3 }, () => ({ reps: '', weight: '', done: false }))
+    )
+  );
+  const [skipReason, setSkipReason] = useState('');
   
   if (activeExercises.length === 0) {
     return (
