@@ -572,7 +572,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinis
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 15, fontWeight: 600, color: '#8A8A85', textDecoration: 'line-through', textTransform: 'capitalize' }}>{e.exerciseName || e.name}</span>
-                      <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#EAEAE6', color: '#8A8A85' }}>Skipped</span>
+                      <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#EAEAE6', color: '#8A8A85' }}>Uncompleted</span>
                     </div>
                     <div style={{ fontSize: 11, color: '#8A8A85' }}>Tap to restore for today</div>
                   </div>
@@ -597,11 +597,11 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinis
                             <span className="badge" style={{ background: '#FFEDD5', color: '#C2410C', fontSize: 10, padding: '2px 8px' }}>Partially completed</span>
                           )
                         ) : (
-                          <span className="badge" style={{ background: '#EAEAE6', color: '#8A8A85', fontSize: 10, padding: '2px 8px' }}>Skipped</span>
+                          <span className="badge" style={{ background: '#EAEAE6', color: '#8A8A85', fontSize: 10, padding: '2px 8px' }}>Not visited</span>
                         )
                       )}
                       {sub && !hasProgress && <span className="badge amber" style={{ fontSize: 10, padding: '2px 8px' }}>Substituted</span>}
-                      {added && !hasProgress && <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#DBEAFE', color: '#1D4ED8' }}>Added</span>}
+                      {added && <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#DBEAFE', color: '#1D4ED8' }}>Newly added</span>}
                       {!hasProgress && <span className="badge neutral" style={{ fontSize: 10, padding: '2px 8px' }}>{e.muscleGroup || e.targetMuscle}</span>}
                     </div>
                     <div style={{ fontSize: 12, color: '#8A8A85', marginBottom: 3 }}>
@@ -955,23 +955,45 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
     // API Call to log the entire exercise
     if (w._id && state.token) {
       try {
-        // Loop through and call log-set sequentially for each set so there are no race conditions
-        for (let si = 0; si < cur.length; si++) {
-          const setObj = cur[si];
-          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/log-set`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${state.token}`
-            },
-            body: JSON.stringify({
-              exerciseIndex: ex.originalIndex,
-              setIndex: si,
-              actualReps: Number(setObj.reps) || 0,
-              actualWeight: Number(setObj.weight) || 0,
-              completed: !!setObj.done
-            })
-          });
+        const setsPayload = cur.map((setObj, si) => ({
+          setIndex: si,
+          actualReps: Number(setObj.reps) || 0,
+          actualWeight: Number(setObj.weight) || 0,
+          completed: !!setObj.done
+        }));
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/log-sets`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${state.token}`
+          },
+          body: JSON.stringify({
+            exerciseIndex: ex.originalIndex,
+            sets: setsPayload
+          })
+        });
+        
+        if (!response.ok) {
+          console.warn("Batch log-sets API failed, falling back to sequential log-set:", response.status);
+          // Fallback to sequential log-set for older backend
+          for (let si = 0; si < cur.length; si++) {
+            const setObj = cur[si];
+            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/log-set`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.token}`
+              },
+              body: JSON.stringify({
+                exerciseIndex: ex.originalIndex,
+                setIndex: si,
+                actualReps: Number(setObj.reps) || 0,
+                actualWeight: Number(setObj.weight) || 0,
+                completed: !!setObj.done
+              })
+            });
+          }
         }
       } catch (err) {
         console.error('Failed to log exercise:', err);
