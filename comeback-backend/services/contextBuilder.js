@@ -37,7 +37,9 @@ async function buildUserContext(userId, targetDate) {
     .lean();
 
   // 5. Construct the final Payload String for Antigravity
-  let payload = `--- USER PROFILE ---\n`;
+  let payload = `--- METADATA ---\n`;
+  payload += `Today's Date: ${new Date(targetDate).toDateString()}\n\n`;
+  payload += `--- USER PROFILE ---\n`;
   payload += `Goal: ${user.primaryGoal || 'Not specified'}\n`;
   payload += `Current Weight: ${user.currentWeightKg}kg (Target: ${user.targetWeightKg}kg)\n`;
   payload += `Injuries/Conditions: ${(user.injuries || []).join(', ')}\n`;

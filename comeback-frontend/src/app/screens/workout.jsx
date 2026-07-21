@@ -338,7 +338,7 @@ function ExtraExercisesSheet({ title, exercises, onClose }) {
   );
 }
 
-export function WorkoutPlan({ workout, weeklyPlanSplit, weekStartDate, onBack, onStart, onFinish, onAddExercise, onSubstituteBrowse, refreshWorkout, isModifyMode }) {
+export function WorkoutPlan({ workout, weeklyPlanSplit, weekStartDate, onBack, onStart, onFinish, onAddExercise, onSubstituteBrowse, refreshWorkout, isModifyMode, onFinishModify }) {
   const { state } = useOnboarding();
   const w = workout || todayWorkout;
 
@@ -443,7 +443,8 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, weekStartDate, onBack, o
       });
       if (res.ok) {
         if (refreshWorkout) refreshWorkout();
-        onBack();
+        if (onFinishModify) onFinishModify();
+        else onBack();
       } else {
         alert("Failed to save changes");
       }
@@ -557,9 +558,9 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, weekStartDate, onBack, o
         </div>
         
         <div className="sticky-cta">
-          {isModifyMode ? (
-            <button className="btn btn-primary" onClick={pendingOverride ? confirmOverride : onBack}>Done plan <i className="ti ti-check btn-icon" /></button>
-          ) : (
+            {isModifyMode ? (
+              <button className="btn btn-primary" onClick={pendingOverride ? confirmOverride : (onFinishModify || onBack)}>Done plan <i className="ti ti-check btn-icon" /></button>
+            ) : (
             <button className="btn btn-primary" onClick={onStart || onBack}>Got it <i className="ti ti-check btn-icon" /></button>
           )}
         </div>
@@ -682,7 +683,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, weekStartDate, onBack, o
           <span style={{ color: '#8A8A85' }}>Coach-balanced ✓</span>
         </div>
         {isModifyMode ? (
-          <button className="btn btn-primary" onClick={pendingOverride ? confirmOverride : onBack}>Done plan <i className="ti ti-check btn-icon" /></button>
+          <button className="btn btn-primary" onClick={pendingOverride ? confirmOverride : (onFinishModify || onBack)}>Done plan <i className="ti ti-check btn-icon" /></button>
         ) : hasProgress ? (
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn" style={{ flex: 1, background: '#F5F5F3', color: '#1A1A2E', fontWeight: 600 }} onClick={onStart}>
