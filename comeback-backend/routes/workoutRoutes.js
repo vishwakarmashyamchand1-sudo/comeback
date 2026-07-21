@@ -8,6 +8,7 @@ const {
   getWorkoutProgress,
   getWorkoutById,
   logSet,
+  logSets,
   addExercise,
   skipExercise,
   restoreExercise,
@@ -47,6 +48,9 @@ router.get('/:id', getWorkoutById);
 
 // 5. PATCH /api/workouts/:id/log-set
 router.patch('/:id/log-set', logSet);
+
+// PATCH /api/workouts/:id/log-sets
+router.patch('/:id/log-sets', logSets);
 
 // 6. POST /api/workouts/:id/add-exercise
 router.post('/:id/add-exercise', addExercise);

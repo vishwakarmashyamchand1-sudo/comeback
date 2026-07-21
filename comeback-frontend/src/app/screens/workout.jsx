@@ -3,6 +3,38 @@ import { Wordmark, Bar, CoachCard, Thumb, PushHeader, Sheet } from '../component
 import { todayWorkout, tomorrow, nutrition, circle, dayTypes } from '../data.js';
 import { useOnboarding } from '../../lib/store.jsx';
 
+function ExpandableInstruction({ text }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!text) return null;
+  
+  const isLong = text.length > 80 || text.split('\n').length > 2;
+  
+  return (
+    <div>
+      <div style={{
+        fontSize: 13, marginTop: 6, marginBottom: 0, color: '#1A1A2E', 
+        whiteSpace: 'pre-line', lineHeight: 1.5,
+        ...(expanded ? {} : {
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden'
+        })
+      }}>
+        {text}
+      </div>
+      {isLong && (
+        <div 
+          onClick={() => setExpanded(!expanded)} 
+          style={{ fontSize: 12, color: '#3B82F6', fontWeight: 600, cursor: 'pointer', marginTop: 4 }}
+        >
+          {expanded ? 'Read less' : 'Read more'}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─────────────────────────── DASHBOARD (Workout tab home) ── */
 export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle, goDiet, onOpenProfile, onChangeDay, weeklyPlanSplit, onFocusChange, weekStartDate }) {
   const { state } = useOnboarding();
@@ -575,7 +607,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, weekStartDate, onBack, o
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 15, fontWeight: 600, color: '#8A8A85', textDecoration: 'line-through', textTransform: 'capitalize' }}>{e.exerciseName || e.name}</span>
-                      <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#EAEAE6', color: '#8A8A85' }}>Skipped</span>
+                      <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#EAEAE6', color: '#8A8A85' }}>Uncompleted</span>
                     </div>
                     <div style={{ fontSize: 11, color: '#8A8A85' }}>Tap to restore for today</div>
                   </div>
@@ -600,11 +632,11 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, weekStartDate, onBack, o
                             <span className="badge" style={{ background: '#FFEDD5', color: '#C2410C', fontSize: 10, padding: '2px 8px' }}>Partially completed</span>
                           )
                         ) : (
-                          <span className="badge" style={{ background: '#EAEAE6', color: '#8A8A85', fontSize: 10, padding: '2px 8px' }}>Skipped</span>
+                          <span className="badge" style={{ background: '#EAEAE6', color: '#8A8A85', fontSize: 10, padding: '2px 8px' }}>Not visited</span>
                         )
                       )}
                       {sub && !hasProgress && <span className="badge amber" style={{ fontSize: 10, padding: '2px 8px' }}>Substituted</span>}
-                      {added && !hasProgress && <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#DBEAFE', color: '#1D4ED8' }}>Added</span>}
+                      {added && <span className="badge" style={{ fontSize: 10, padding: '2px 8px', background: '#DBEAFE', color: '#1D4ED8' }}>Added</span>}
                       {!hasProgress && <span className="badge neutral" style={{ fontSize: 10, padding: '2px 8px' }}>{e.muscleGroup || e.targetMuscle}</span>}
                     </div>
                     <div style={{ fontSize: 12, color: '#8A8A85', marginBottom: 3 }}>
@@ -628,9 +660,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, weekStartDate, onBack, o
                     </p>
                     
                     <span style={{ fontSize: 11, fontWeight: 600, color: '#8A8A85', letterSpacing: '.05em' }}>INSTRUCTIONS</span>
-                    <div style={{ fontSize: 13, marginTop: 6, marginBottom: 0, color: '#1A1A2E', whiteSpace: 'pre-line', lineHeight: 1.5 }}>
-                      {e.exerciseId?.instructionsEn || 'Detailed instructions will appear here once linked.'}
-                    </div>
+                    <ExpandableInstruction text={e.exerciseId?.instructionsEn || 'Detailed instructions will appear here once linked.'} />
                   </div>
                 )}
                 {/* --- END EXPANDED DETAILS PANEL --- */}
@@ -912,11 +942,24 @@ function SubstituteSheet({ exerciseDbId, targetMuscle, wasSubstitutedFrom, onClo
 /* ─────────────────────────── ACTIVE WORKOUT ──────────────── */
 export function ActiveWorkout({ workout, weeklyPlanSplit, weekStartDate, onBack, onFinish, onSwap }) {
   const { state } = useOnboarding();
-  const [idx, setIdx] = useState(0);
-  const [sets, setSets] = useState(() => (workout?.exercises || []).map(e => e.actualSetsArray?.map(s => ({ reps: s.actualReps || '', weight: s.actualWeight || '', done: !!s.completed })) || Array.from({ length: e.sets }, () => ({ reps: '', weight: '', done: false }))));
-  const [skipReason, setSkipReason] = useState('');
   const w = workout || todayWorkout;
   const activeExercises = (w.exercises || []).map((e, i) => ({ ...e, originalIndex: i })).filter(e => !e.wasSkipped);
+
+  const [idx, setIdx] = useState(() => {
+    const firstPendingIdx = activeExercises.findIndex(e => {
+      const isDone = e.isCompleted || (Array.isArray(e.actualSetsArray) && e.actualSetsArray.length > 0 && e.actualSetsArray.every(s => s.completed));
+      return !isDone;
+    });
+    return firstPendingIdx !== -1 ? firstPendingIdx : 0;
+  });
+  
+  const [sets, setSets] = useState(() => 
+    activeExercises.map(e => 
+      e.actualSetsArray?.map(s => ({ reps: s.actualReps || '', weight: s.actualWeight || '', done: !!s.completed })) 
+      || Array.from({ length: e.sets || 3 }, () => ({ reps: '', weight: '', done: false }))
+    )
+  );
+  const [skipReason, setSkipReason] = useState('');
   
   if (activeExercises.length === 0) {
     return (
@@ -985,23 +1028,45 @@ export function ActiveWorkout({ workout, weeklyPlanSplit, weekStartDate, onBack,
     // API Call to log the entire exercise
     if (w._id && state.token) {
       try {
-        // Loop through and call log-set sequentially for each set so there are no race conditions
-        for (let si = 0; si < cur.length; si++) {
-          const setObj = cur[si];
-          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/log-set`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${state.token}`
-            },
-            body: JSON.stringify({
-              exerciseIndex: ex.originalIndex,
-              setIndex: si,
-              actualReps: Number(setObj.reps) || 0,
-              actualWeight: Number(setObj.weight) || 0,
-              completed: !!setObj.done
-            })
-          });
+        const setsPayload = cur.map((setObj, si) => ({
+          setIndex: si,
+          actualReps: Number(setObj.reps) || 0,
+          actualWeight: Number(setObj.weight) || 0,
+          completed: !!setObj.done
+        }));
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/log-sets`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${state.token}`
+          },
+          body: JSON.stringify({
+            exerciseIndex: ex.originalIndex,
+            sets: setsPayload
+          })
+        });
+        
+        if (!response.ok) {
+          console.warn("Batch log-sets API failed, falling back to sequential log-set:", response.status);
+          // Fallback to sequential log-set for older backend
+          for (let si = 0; si < cur.length; si++) {
+            const setObj = cur[si];
+            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/workouts/${w._id}/log-set`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.token}`
+              },
+              body: JSON.stringify({
+                exerciseIndex: ex.originalIndex,
+                setIndex: si,
+                actualReps: Number(setObj.reps) || 0,
+                actualWeight: Number(setObj.weight) || 0,
+                completed: !!setObj.done
+              })
+            });
+          }
         }
       } catch (err) {
         console.error('Failed to log exercise:', err);
