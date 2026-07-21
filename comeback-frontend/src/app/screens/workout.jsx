@@ -4,16 +4,17 @@ import { todayWorkout, tomorrow, nutrition, circle, dayTypes } from '../data.js'
 import { useOnboarding } from '../../lib/store.jsx';
 
 /* ─────────────────────────── DASHBOARD (Workout tab home) ── */
-export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle, goDiet, onOpenProfile, onChangeDay, weeklyPlanSplit, onFocusChange }) {
+export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle, goDiet, onOpenProfile, onChangeDay, weeklyPlanSplit, onFocusChange, weekStartDate }) {
   const { state } = useOnboarding();
   const userName = state.profile?.name || '';
   const initial = userName.charAt(0).toUpperCase();
 
   const hour = new Date().getHours();
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-
+  
   const w = workout || todayWorkout; // fallback
+  const workoutDate = new Date(w.date || Date.now());
+  const currentDay = workoutDate.toLocaleDateString('en-US', { weekday: 'long' });
     const isDone = done || w.status === 'completed';
   const [dayType, setDayType] = useState(w.sessionType || w.type || 'Full Body');
   const [dayOpen, setDayOpen] = useState(false);
@@ -181,7 +182,7 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
 
         {/* coach */}
         <div style={{ marginBottom: 14 }}>
-          <CoachCard>{w?.aiSummary || dietData?.dietLog?.dailyCoachTip || "Day 2 of your comeback. Ease in today — hit the planned weights, don't chase PRs yet."}</CoachCard>
+          <CoachCard>{w?.aiSummary || dietData?.dietLog?.dailyCoachTip || `Day ${computedDay} of your comeback. ${computedDay <= 3 ? "Ease in today — hit the planned weights, don't chase PRs yet." : "You're doing great, keep pushing!"}`}</CoachCard>
         </div>
 
         {/* circle */}
@@ -202,7 +203,7 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
           </div>
         </div>
       </div>
-      {dayOpen && <ChangeDaySheet current={dayType} weeklyPlanSplit={weeklyPlanSplit} onClose={() => setDayOpen(false)} onPick={(t, i) => { setDayType(t); setDayOpen(false); if (onFocusChange && i !== undefined) onFocusChange(i); }} />}
+      {dayOpen && <ChangeDaySheet current={dayType} currentDate={w?.date} weeklyPlanSplit={weeklyPlanSplit} weekStartDate={weekStartDate} onClose={() => setDayOpen(false)} onPick={(t, i) => { setDayType(t); setDayOpen(false); if (onFocusChange && i !== undefined) onFocusChange(i); }} />}
       {historyData && (
         <Sheet onClose={() => setHistoryData(null)}>
           <div style={{ padding: '0 20px 22px', maxHeight: '70vh', overflowY: 'auto' }}>
@@ -305,7 +306,7 @@ function ExtraExercisesSheet({ title, exercises, onClose }) {
   );
 }
 
-export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinish, onAddExercise, onSubstituteBrowse, refreshWorkout, isModifyMode }) {
+export function WorkoutPlan({ workout, weeklyPlanSplit, weekStartDate, onBack, onStart, onFinish, onAddExercise, onSubstituteBrowse, refreshWorkout, isModifyMode }) {
   const { state } = useOnboarding();
   const w = workout || todayWorkout;
 
@@ -404,7 +405,8 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinis
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
         body: JSON.stringify({ 
           exercises: pendingOverride.exercises, 
-          planSource: pendingOverride.planSource
+          planSource: pendingOverride.planSource,
+          sessionType: pendingOverride.sessionType
         })
       });
       if (res.ok) {
@@ -530,7 +532,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinis
           )}
         </div>
 
-        {dayOpen && <ChangeDaySheet current={dayType} weeklyPlanSplit={weeklyPlanSplit} onClose={() => setDayOpen(false)} onPick={t => { setDayOpen(false); swapMuscle(t); }} />}
+        {dayOpen && <ChangeDaySheet current={dayType} currentDate={workout?.date} weeklyPlanSplit={weeklyPlanSplit} weekStartDate={weekStartDate} onClose={() => setDayOpen(false)} onPick={t => { setDayOpen(false); swapMuscle(t); }} />}
 
         {isGenerating && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.9)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -669,7 +671,7 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinis
 
       {showWarmup && <ExtraExercisesSheet title="Warm-Up Exercises" exercises={warmupExercises} onClose={() => setShowWarmup(false)} />}
       {showCooldown && <ExtraExercisesSheet title="Cool-Down Exercises" exercises={cooldownExercises} onClose={() => setShowCooldown(false)} />}
-      {dayOpen && <ChangeDaySheet current={dayType} weeklyPlanSplit={weeklyPlanSplit} onClose={() => setDayOpen(false)} onPick={t => { setDayOpen(false); swapMuscle(t); }} />}
+      {dayOpen && <ChangeDaySheet current={dayType} currentDate={activeW?.date} weeklyPlanSplit={weeklyPlanSplit} weekStartDate={weekStartDate} onClose={() => setDayOpen(false)} onPick={t => { setDayOpen(false); swapMuscle(t); }} />}
       {pickerFor && (
         <SubstituteSheet 
           exerciseDbId={activeW?.exercises?.find(e => e.id === pickerFor)?.exerciseDbId || activeW?.exercises?.find(e => e.id === pickerFor)?.exerciseId} 
@@ -745,16 +747,42 @@ export function WorkoutPlan({ workout, weeklyPlanSplit, onBack, onStart, onFinis
   );
 }
 
-export function ChangeDaySheet({ current, weeklyPlanSplit, onClose, onPick }) {
+export function ChangeDaySheet({ current, currentDate, weeklyPlanSplit, onClose, onPick, weekStartDate }) {
+  const { state } = useOnboarding();
   let options = [];
+
+  // Calculate real week start date from join date if weekStartDate prop is missing
+  let actualWeekStart = weekStartDate;
+  if (!actualWeekStart) {
+    const joinDate = state.profile?.createdAt ? new Date(state.profile.createdAt) : new Date();
+    joinDate.setHours(0,0,0,0);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    // If they haven't started yet or time zone weirdness puts diff < 0, fallback to today
+    const diffDays = Math.max(0, Math.floor((today - joinDate) / (1000 * 60 * 60 * 24))) + 1;
+    const computedWeek = Math.ceil(diffDays / 7) || 1;
+    
+    actualWeekStart = new Date(joinDate);
+    actualWeekStart.setDate(actualWeekStart.getDate() + (computedWeek - 1) * 7);
+  }
 
   if (Array.isArray(weeklyPlanSplit) && weeklyPlanSplit.length > 0) {
     options = weeklyPlanSplit.map((name, i) => {
-      const d = new Date();
+      const d = new Date(actualWeekStart);
       d.setDate(d.getDate() + i);
+      
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const compareD = new Date(d);
+      compareD.setHours(0,0,0,0);
+      
       let dateLabel = '';
-      if (i === 0) dateLabel = 'Today';
-      else if (i === 1) dateLabel = 'Tomorrow';
+      const diffTime = compareD - today;
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === -1) dateLabel = 'Yesterday';
+      else if (diffDays === 0) dateLabel = 'Today';
+      else if (diffDays === 1) dateLabel = 'Tomorrow';
       else dateLabel = d.toLocaleDateString('en-US', { weekday: 'long' });
 
       const safeName = typeof name === 'string' ? name : 'Workout';
@@ -771,7 +799,8 @@ export function ChangeDaySheet({ current, weeklyPlanSplit, onClose, onPick }) {
         icon: match?.icon || 'ti-barbell',
         muscles: match?.muscles || 'AI generated focus',
         dateLabel,
-        offset: i
+        offset: i,
+        dateObj: new Date(d)
       };
     });
   } else {
@@ -787,7 +816,7 @@ export function ChangeDaySheet({ current, weeklyPlanSplit, onClose, onPick }) {
         <div style={{ fontSize: 12, color: '#8A8A85', marginBottom: 16 }}>Picking a new focus reloads that group's exercises for today.</div>
         <div className="scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {options.map(d => {
-            const sel = safeCurrent === d.name;
+            const sel = currentDate && d.dateObj ? new Date(currentDate).toDateString() === d.dateObj.toDateString() : safeCurrent === d.name;
             return (
               <div key={d.id} onClick={() => onPick(d.name, d.offset)} style={{ background: sel ? '#1A1A2E0D' : '#fff', border: sel ? '2px solid #1A1A2E' : '1.5px solid #DDDDD9', borderRadius: 14, padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: '#E8E8F5', color: '#1A1A2E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flex: 'none' }}><i className={`ti ${d.icon}`} /></div>
@@ -880,7 +909,7 @@ function SubstituteSheet({ exerciseDbId, targetMuscle, wasSubstitutedFrom, onClo
 }
 
 /* ─────────────────────────── ACTIVE WORKOUT ──────────────── */
-export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
+export function ActiveWorkout({ workout, weeklyPlanSplit, weekStartDate, onBack, onFinish, onSwap }) {
   const { state } = useOnboarding();
   const [idx, setIdx] = useState(0);
   const [sets, setSets] = useState(() => (workout?.exercises || []).map(e => e.actualSetsArray?.map(s => ({ reps: s.actualReps || '', weight: s.actualWeight || '', done: !!s.completed })) || Array.from({ length: e.sets }, () => ({ reps: '', weight: '', done: false }))));
@@ -1100,7 +1129,7 @@ export function ActiveWorkout({ workout, onBack, onFinish, onSwap }) {
 }
 
 /* ─────────────────────────── POST SESSION ────────────────── */
-export function PostSession({ workout, isCompleted, onDone, onModify }) {
+export function PostSession({ workout, isCompleted, onDone, onModify, refreshTrigger }) {
   const { state } = useOnboarding();
   const [phase, setPhase] = useState(isCompleted ? 'loading' : 'rate'); // rate | loading | summary | confirming
   const [rating, setRating] = useState(null);
@@ -1113,6 +1142,7 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
   
   const feels = [['Easy', 'ti-feather'], ['Good', 'ti-thumb-up'], ['Hard', 'ti-flame'], ['Exhausted', 'ti-battery-1']];
   const [showAllTomorrow, setShowAllTomorrow] = useState(false);
+  const [showAiPlan, setShowAiPlan] = useState(true);
 
   // Fetch summary if already completed
   useEffect(() => {
@@ -1153,7 +1183,7 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
       };
       fetchExistingSummary();
     }
-  }, [workout.status, workout._id, state.token]);
+  }, [workout.status, workout._id, state.token, refreshTrigger]);
 
   const submitCompletion = async () => {
     if (!rating || !feel) {
@@ -1215,13 +1245,14 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
       if (isModify) onModify(); else onDone();
       return;
     }
+    const activeTomorrow = showAiPlan ? summaryData.tomorrowPlan : summaryData.originalTomorrowPlan;
 
     setPhase('confirming');
     try {
       await fetch(`${import.meta.env.VITE_API_URL || ''}/api/workouts/tomorrow/confirm-ai`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
-        body: JSON.stringify({ tomorrowPlan: summaryData.tomorrowPlan })
+        body: JSON.stringify({ tomorrowPlan: activeTomorrow })
       });
       if (isModify) {
         onModify();
@@ -1264,7 +1295,7 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
           <div className="s-label">Notes (optional)</div>
           <textarea className="input" rows={3} placeholder="Shoulder felt tight on last set…" style={{ resize: 'none' }} value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
-        <div className="sticky-cta"><button className="btn btn-primary" onClick={submitCompletion}>See my summary <i className="ti ti-arrow-right btn-icon" /></button></div>
+        <div className="sticky-cta"><button className="btn btn-primary" disabled={!rating || !feel || !duration} onClick={submitCompletion}>See my summary <i className="ti ti-arrow-right btn-icon" /></button></div>
       </div>
     );
   }
@@ -1279,11 +1310,12 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
     );
   }
 
-  const tomorrow = summaryData?.tomorrowPlan || { sessionType: 'Rest Day', dayOfWeek: 'Tomorrow', exercises: [] };
+  const hasAiTuned = !!summaryData?.originalTomorrowPlan && !!summaryData?.aiSummary;
+  const activeTomorrow = showAiPlan ? (summaryData?.tomorrowPlan || { sessionType: 'Rest Day', dayOfWeek: 'Tomorrow', exercises: [] }) : (summaryData?.originalTomorrowPlan || { sessionType: 'Rest Day', dayOfWeek: 'Tomorrow', exercises: [] });
   const setsDoneCount = summaryData?.workout?.exercises?.reduce((acc, ex) => acc + (ex.wasSkipped ? 0 : (Array.isArray(ex.actualSetsArray || ex.sets) ? (ex.actualSetsArray || ex.sets).filter(s => s.completed).length : 0)), 0) || 0;
   const totalSets = summaryData?.workout?.exercises?.reduce((acc, ex) => acc + (ex.wasSkipped ? 0 : (Array.isArray(ex.actualSetsArray || ex.sets) ? (ex.actualSetsArray || ex.sets).length : Number(ex.sets) || 0)), 0) || 0;
   const prCount = summaryData?.newPRs?.length || 0;
-  const isRest = tomorrow.status === 'rest_day' || tomorrow.sessionType === 'Rest Day';
+  const isRest = activeTomorrow.status === 'rest_day' || activeTomorrow.sessionType === 'Rest Day' || !activeTomorrow.exercises || activeTomorrow.exercises.length === 0;
 
   return (
     <div className="app-body">
@@ -1304,9 +1336,16 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
           ))}
         </div>
         
-        {prCount > 0 && (
+        {prCount > 0 && summaryData?.newPRs && (
           <div style={{ marginBottom: 14 }}>
-            {summaryData.newPRs.map((pr, i) => (
+            {Object.values(summaryData.newPRs.reduce((acc, pr) => {
+              if (!acc[pr.exerciseName]) {
+                acc[pr.exerciseName] = pr;
+              } else {
+                acc[pr.exerciseName] = pr;
+              }
+              return acc;
+            }, {})).map((pr, i) => (
               <div key={i} className="card" style={{ padding: '10px 14px', borderRadius: 12, marginBottom: 8, borderLeft: '3px solid #3A7A0A' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1A1A2E', marginBottom: 2 }}>{pr.exerciseName}</div>
                 <div style={{ fontSize: 11, color: '#8A8A85' }}>New best: <strong style={{ color: '#3A7A0A' }}>{pr.newBest}</strong> (was {pr.previousBest})</div>
@@ -1315,28 +1354,53 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
           </div>
         )}
 
-
-
         <div className="card" style={{ borderRadius: 18, marginBottom: 24 }}>
+          {hasAiTuned && (
+            <div style={{ display: 'flex', gap: 4, background: '#F5F5F3', padding: 4, borderRadius: 10, marginBottom: 16 }}>
+              <button 
+                style={{ flex: 1, padding: '8px 0', fontSize: 12, fontWeight: 600, borderRadius: 8, border: 'none', background: showAiPlan ? '#fff' : 'transparent', color: showAiPlan ? '#1A1A2E' : '#8A8A85', boxShadow: showAiPlan ? '0 2px 8px rgba(0,0,0,0.05)' : 'none' }}
+                onClick={() => setShowAiPlan(true)}
+              >
+                ✨ AI Tuned
+              </button>
+              <button 
+                style={{ flex: 1, padding: '8px 0', fontSize: 12, fontWeight: 600, borderRadius: 8, border: 'none', background: !showAiPlan ? '#fff' : 'transparent', color: !showAiPlan ? '#1A1A2E' : '#8A8A85', boxShadow: !showAiPlan ? '0 2px 8px rgba(0,0,0,0.05)' : 'none' }}
+                onClick={() => setShowAiPlan(false)}
+              >
+                📅 Original Plan
+              </button>
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 15, fontWeight: 600, color: '#1A1A2E' }}>Tomorrow — {tomorrow.sessionType || 'Rest Day'}</span>
-            <span className="badge neutral" style={{ fontSize: 10 }}>{tomorrow.dayOfWeek}</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: '#1A1A2E' }}>Tomorrow — {activeTomorrow.sessionType || 'Rest Day'}</span>
+            <span className="badge neutral" style={{ fontSize: 10 }}>{activeTomorrow.dayOfWeek}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 14 }}>
             {!isRest ? (
-              tomorrow.exercises.slice(0, showAllTomorrow ? tomorrow.exercises.length : 3).map((e, i) => (
-                <React.Fragment key={i}>
-                  {i > 0 && <div className="rowline" />}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}><span style={{ color: '#1A1A2E' }}>{e.exerciseName}</span><span style={{ color: '#8A8A85' }}>{e.reps || '10-12'} reps</span></div>
-                </React.Fragment>
-              ))
+              activeTomorrow.exercises.slice(0, showAllTomorrow ? activeTomorrow.exercises.length : 3).map((e, i) => {
+                const setsCount = Array.isArray(e.sets) ? e.sets.length : (e.sets || 3);
+                const repsCount = e.reps || (Array.isArray(e.sets) && e.sets[0]?.plannedReps) || '10-12';
+                const weightVal = e.weight || (Array.isArray(e.sets) && e.sets[0]?.plannedWeight);
+
+                return (
+                  <React.Fragment key={i}>
+                    {i > 0 && <div className="rowline" />}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                      <span style={{ color: '#1A1A2E' }}>{e.exerciseName}</span>
+                      <span style={{ color: '#8A8A85' }}>
+                        {weightVal ? `${repsCount} reps x ${weightVal}kg` : `${setsCount} sets x ${repsCount} reps`}
+                      </span>
+                    </div>
+                  </React.Fragment>
+                );
+              })
             ) : (
               <div style={{ fontSize: 13, color: '#8A8A85', fontStyle: 'italic' }}>Time to recover and rebuild!</div>
             )}
-            {!isRest && tomorrow.exercises.length > 3 && !showAllTomorrow && (
-              <div style={{ fontSize: 12, color: '#8A8A85', cursor: 'pointer' }} onClick={() => setShowAllTomorrow(true)}>+ {tomorrow.exercises.length - 3} more</div>
+            {!isRest && activeTomorrow.exercises.length > 3 && !showAllTomorrow && (
+              <div style={{ fontSize: 12, color: '#8A8A85', cursor: 'pointer' }} onClick={() => setShowAllTomorrow(true)}>+ {activeTomorrow.exercises.length - 3} more</div>
             )}
-            {!isRest && tomorrow.exercises.length > 3 && showAllTomorrow && (
+            {!isRest && activeTomorrow.exercises.length > 3 && showAllTomorrow && (
               <div style={{ fontSize: 12, color: '#8A8A85', cursor: 'pointer' }} onClick={() => setShowAllTomorrow(false)}>Show less</div>
             )}
           </div>
@@ -1344,6 +1408,9 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-primary" style={{ flex: 1, padding: 13, fontSize: 13 }} onClick={onDone}>
                 Back to Dashboard
+              </button>
+              <button className="btn" style={{ flex: 1, padding: 13, fontSize: 13, background: '#fff', border: '1.5px solid #1A1A2E', color: '#1A1A2E' }} onClick={onModify}>
+                Modify plan
               </button>
             </div>
           ) : (
@@ -1356,9 +1423,6 @@ export function PostSession({ workout, isCompleted, onDone, onModify }) {
                   {phase === 'confirming' ? 'Saving...' : 'Modify plan'}
                 </button>
               </div>
-              <button className="btn" style={{ width: '100%', marginTop: 12, padding: 13, fontSize: 13, background: 'transparent', color: '#8A8A85', border: 'none', opacity: phase === 'confirming' ? 0.7 : 1 }} onClick={() => onDone()} disabled={phase === 'confirming'}>
-                 Go to dashboard
-              </button>
             </>
           )}
         </div>

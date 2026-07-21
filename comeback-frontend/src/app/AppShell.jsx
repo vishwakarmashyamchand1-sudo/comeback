@@ -14,6 +14,7 @@ export default function AppShell() {
   const [tab, setTab] = useState('workout');
   const [stack, setStack] = useState([]);
   const stateRef = useRef({ tab, stack });
+  const currentOffsetRef = useRef(0);
   
   useEffect(() => {
     stateRef.current = { tab, stack };
@@ -22,6 +23,7 @@ export default function AppShell() {
   const [workoutDone, setWorkoutDone] = useState(false);
   const [workout, setWorkout] = useState(null);
   const [weeklyPlanSplit, setWeeklyPlanSplit] = useState([]);
+  const [weekStartDate, setWeekStartDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [substituteContext, setSubstituteContext] = useState(null);
@@ -64,6 +66,7 @@ export default function AppShell() {
   const [browserMuscle, setBrowserMuscle] = useState('All');
 
   const fetchWorkoutByOffset = (offset = 0, silent = false) => {
+    currentOffsetRef.current = offset;
     if (!silent) setLoading(true);
     const endpoint = offset === 0 ? '/api/workouts/today' : `/api/workouts/by-offset/${offset}`;
     
@@ -80,6 +83,7 @@ export default function AppShell() {
       .then(data => {
         if (!data) return;
         if (data.weeklyPlanSplit) setWeeklyPlanSplit(data.weeklyPlanSplit);
+        if (data.weekStartDate) setWeekStartDate(data.weekStartDate);
 
         if (data.workout) {
           const mappedWorkout = {
@@ -204,7 +208,7 @@ export default function AppShell() {
         })
       });
       if (res.ok) {
-        fetchWorkoutByOffset(0);
+        fetchWorkoutByOffset(currentOffsetRef.current, true);
       }
     } catch (err) {
       console.error("Failed to add exercise", err);
@@ -220,7 +224,7 @@ export default function AppShell() {
         body: JSON.stringify({ exerciseIndex, newExerciseId })
       });
       if (res.ok) {
-        fetchWorkoutByOffset(0);
+        fetchWorkoutByOffset(currentOffsetRef.current, true);
       }
     } catch (err) {
       console.error("Failed to substitute exercise", err);
@@ -228,25 +232,33 @@ export default function AppShell() {
   };
 
   let overlay = null;
-  if (top === 'plan') overlay = <WorkoutPlan workout={workout} weeklyPlanSplit={weeklyPlanSplit} onBack={pop} onStart={() => push('active')} onFinish={() => replace('post')} onAddExercise={() => { setBrowserMuscle('All'); push('browser'); }} onSubstituteBrowse={(index, muscle) => { setBrowserMuscle(muscle); setSubstituteContext({ index }); push('browser'); }} refreshWorkout={() => fetchWorkoutByOffset(0)} />;
+  if (top === 'plan') overlay = <WorkoutPlan workout={workout} weeklyPlanSplit={weeklyPlanSplit} weekStartDate={weekStartDate} onBack={pop} onStart={() => push('active')} onFinish={() => replace('post')} onAddExercise={() => { setBrowserMuscle('All'); push('browser'); }} onSubstituteBrowse={(index, muscle) => { setBrowserMuscle(muscle); setSubstituteContext({ index }); push('browser'); }} refreshWorkout={() => fetchWorkoutByOffset(0)} />;
   if (top === 'modify_plan') overlay = <WorkoutPlan 
     workout={workout} 
     weeklyPlanSplit={weeklyPlanSplit} 
+    weekStartDate={weekStartDate}
     onBack={() => { fetchWorkoutByOffset(0); pop(); }} 
+    onFinishModify={() => {
+      setWorkoutDone(true);
+      reset();
+      fetchWorkoutByOffset(0);
+      setStack([]);
+    }}
     onStart={() => {}} 
+    onFinish={() => {}} 
     onAddExercise={() => { setBrowserMuscle('All'); push('browser'); }} 
-    onSubstituteBrowse={(index, muscle) => { setBrowserMuscle(muscle); setSubstituteContext({ index }); push('browser'); }}
-    refreshWorkout={() => fetchWorkoutByOffset(1)} 
+    onSubstituteBrowse={(index, muscle) => { setBrowserMuscle(muscle); setSubstituteContext({ index }); push('browser'); }} 
+    refreshWorkout={() => fetchWorkoutByOffset(1, true)} 
     isModifyMode={true} 
   />;
-  if (top === 'active') overlay = <ActiveWorkout workout={workout} onBack={() => { fetchWorkoutByOffset(0, true); pop(); }} onFinish={() => replace('post')} onSwap={(muscle) => { setBrowserMuscle(muscle || 'All'); push('browser'); }} />;
+  if (top === 'active') overlay = <ActiveWorkout workout={workout} weekStartDate={weekStartDate} weeklyPlanSplit={weeklyPlanSplit} onBack={() => { fetchWorkoutByOffset(0, true); pop(); }} onFinish={() => replace('post')} onSwap={(muscle) => { setBrowserMuscle(muscle || 'All'); push('browser'); }} />;
   if (top === 'post') overlay = <PostSession 
     workout={workout} 
     isCompleted={workoutDone || workout?.status === 'completed'}
+    refreshTrigger={stack.length}
     onDone={() => { setWorkoutDone(true); reset(); fetchWorkoutByOffset(0); }} 
     onModify={() => { 
-      setWorkoutDone(true); 
-      reset(); 
+      // Do NOT setWorkoutDone(true) here, so the user can back out to the summary
       fetchWorkoutByOffset(1); // Jump to tomorrow's workout
       push('modify_plan'); 
     }} 
@@ -268,7 +280,7 @@ export default function AppShell() {
   if (top === 'profile') overlay = <Profile onBack={pop} />;
 
   let tabScreen;
-  if (tab === 'workout') tabScreen = <Dashboard workout={workout} weeklyPlanSplit={weeklyPlanSplit} done={workoutDone} onStart={() => push('plan')} onViewSummary={() => replace('post')} onOpenCircle={() => push('circle')} goDiet={() => handleTabChange('diet')} onOpenProfile={() => push('profile')} onChangeDay={() => push('plan')} onFocusChange={fetchWorkoutByOffset} />;
+  if (tab === 'workout') tabScreen = <Dashboard workout={workout} weeklyPlanSplit={weeklyPlanSplit} weekStartDate={weekStartDate} done={workoutDone} onStart={() => push('plan')} onViewSummary={() => replace('post')} onOpenCircle={() => push('circle')} goDiet={() => handleTabChange('diet')} onOpenProfile={() => push('profile')} onChangeDay={() => push('plan')} onFocusChange={fetchWorkoutByOffset} />;
   if (tab === 'diet') tabScreen = <Diet key={refreshDiet} onLogMeal={(photoData) => { setCapturedPhoto(photoData); push('food'); }} />;
   if (tab === 'coach') tabScreen = <Coach />;
   if (tab === 'progress') tabScreen = <Progress />;

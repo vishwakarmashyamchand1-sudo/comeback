@@ -49,7 +49,7 @@ User Profile:
     prompt += `
 Each of the 7 daily objects must match this schema:
 - 'dayName' (string: e.g., "Day 1")
-- 'sessionType' (string: e.g., "Push Day", "Rest")
+- 'sessionType' (string: Provide an engaging, descriptive title like "Chest & Back Focus", "Heavy Push", or "Leg Day Power". NEVER use clinical lettering/numbering like "A", "B", "1", or "2" - e.g. Do NOT output "Upper Body A".)
 - 'isRestDay' (boolean)
 - 'exercises' (array of objects). CRITICAL INSTRUCTION: You MUST generate EXACTLY ${user.daysPerWeek || 5} workout days with a populated 'exercises' array. For the remaining (7 - ${user.daysPerWeek || 5}) days, 'sessionType' MUST be "Rest", 'isRestDay' MUST be true, and 'exercises' MUST be an empty array []. DO NOT generate stretching, mobility, or any exercises on Rest days!
   - If it is a workout day, 'exercises' must contain:
@@ -93,9 +93,9 @@ Review the user's Context String, which contains their profile, the last 3 days 
 You MUST return ONLY a valid JSON object matching this schema. Do not include markdown code blocks.
 
 {
-  "summary": "String. A 2-3 sentence honest, encouraging post-workout feedback based on today's performance.",
+  "summary": "String. A 2-3 sentence honest, encouraging post-workout feedback based on today's performance. If the user provided any 'Notes' for today, you MUST explicitly acknowledge what they said in your first sentence. You MUST also explicitly mention how you tuned tomorrow's exercises based on today's ratings or their notes. IMPORTANT: Never guess or name workouts beyond tomorrow. Only mention tomorrow's sessionType exactly as provided in the context.",
   "tomorrow": {
-    "sessionType": "String. The name of tomorrow's workout (e.g. Pull Day, Legs, Active Recovery)",
+    "sessionType": "String. You MUST keep the exact original sessionType provided in the context for tomorrow (e.g., 'Push Day - Chest & Shoulders'). Do not change the name.",
     "isRestDay": boolean,
     "exercises": [
       {
