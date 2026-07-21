@@ -97,7 +97,8 @@ const getTodayWorkout = asyncHandler(async (req, res) => {
       workout: workout,
       isRestDay: false,
       previousSession: previousSession,
-      weeklyPlanSplit: activeSplit
+      weeklyPlanSplit: activeSplit,
+      weekStartDate: user.createdAt
     });
   }
 
@@ -118,7 +119,8 @@ const getTodayWorkout = asyncHandler(async (req, res) => {
       workout: null,
       isRestDay: true,
       previousSession: previousSession,
-      weeklyPlanSplit: activeSplit
+      weeklyPlanSplit: activeSplit,
+      weekStartDate: user.createdAt
     });
   }
 
@@ -871,8 +873,8 @@ const confirmPlan = asyncHandler(async (req, res) => {
   const User = require('../models/User');
   const Workout = require('../models/Workout');
 
-  // Read exactly what the  requested from the frontend
-  const { exercises, planSource } = req.body;
+  // Read exactly what the frontend requested
+  const { exercises, planSource, sessionType } = req.body;
 
   if (!exercises || !planSource) {
     res.status(400);
@@ -894,8 +896,8 @@ const confirmPlan = asyncHandler(async (req, res) => {
   }
 
   // If a muscle swap occurred, physically swap the days in the user's weekly split
-  if (planSource === 'muscle_swap' && exercises.length > 0 && exercises[0].muscleGroup) {
-    const targetMuscle = exercises[0].muscleGroup;
+  if (planSource === 'muscle_swap' && sessionType) {
+    const targetMuscle = sessionType;
     
     // Determine the current offset of the workout being confirmed
     const today = new Date();
@@ -1092,6 +1094,12 @@ const completeWorkout = asyncHandler(async (req, res) => {
     workout.prCount = newPRs.length;
   }
 
+  // Fetch the existing tomorrow plan if we have one
+  const tomorrowDate = new Date();
+  tomorrowDate.setUTCHours(0, 0, 0, 0);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const existingTomorrowPlan = await Workout.findOne({ userId: user._id, date: tomorrowDate });
+
   // 6. Steps 48, 49, 50, 51: Call Antigravity API
   try {
     const targetDate = new Date(); // today
@@ -1102,10 +1110,7 @@ const completeWorkout = asyncHandler(async (req, res) => {
     workout.aiSummary = aiResponse.summary;
     await workout.save();
 
-    // Create tomorrow's plan
-    const tomorrowDate = new Date();
-    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-    tomorrowDate.setUTCHours(0, 0, 0, 0);
+    // Create tomorrow's plan preview
 
     // Resolve exercise IDs for the AI generated exercises
     const finalExercises = [];
@@ -1165,17 +1170,12 @@ const completeWorkout = asyncHandler(async (req, res) => {
       workout: workout,
       aiSummary: aiResponse.summary,
       tomorrowPlan: tomorrowPlanPreview,
+      originalTomorrowPlan: existingTomorrowPlan,
       newPRs: newPRs
     });
 
   } catch (error) {
     console.error("Failed to generate tomorrow plan:", error);
-    
-    // Fetch the existing tomorrow plan if we have one
-    const tomorrowDate = new Date();
-    tomorrowDate.setUTCHours(0, 0, 0, 0);
-    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-    const existingTomorrowPlan = await Workout.findOne({ userId: user._id, date: tomorrowDate });
 
     res.status(200).json({
       success: true,
@@ -1183,6 +1183,7 @@ const completeWorkout = asyncHandler(async (req, res) => {
       workout: workout,
       aiSummary: null,
       tomorrowPlan: existingTomorrowPlan || null,
+      originalTomorrowPlan: existingTomorrowPlan || null,
       newPRs: newPRs
     });
   }

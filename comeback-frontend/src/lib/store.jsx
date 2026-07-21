@@ -53,7 +53,11 @@ function reducer(state, action) {
         ...state, 
         isAuthenticated: true, 
         token: action.token,
-        profile: { ...(state.profile || {}), name: action.user?.name || state.profile?.name || '' }
+        profile: { 
+          ...(state.profile || {}), 
+          name: action.user?.name || state.profile?.name || '',
+          createdAt: action.user?.createdAt || state.profile?.createdAt
+        }
       };
     case 'next':  return { ...state, step: action.step, dir: 'fwd' };
     case 'back':  return { ...state, step: action.step, dir: 'back' };
