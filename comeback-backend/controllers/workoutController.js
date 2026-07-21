@@ -1279,12 +1279,38 @@ const getWorkoutSummary = asyncHandler(async (req, res) => {
 
   // Get metrics for PRs
   let metric = await Metric.findOne({ userId: user._id, weekNumber: user.currentWeekNumber });
-  const newPRs = metric ? metric.newPRs : [];
+  const allPRs = metric ? metric.newPRs : [];
+
+  // Filter PRs to only those achieved during this specific workout
+  const workoutStart = new Date(workout.date);
+  workoutStart.setUTCHours(0, 0, 0, 0);
+  
+  const workoutEnd = new Date(workoutStart);
+  workoutEnd.setDate(workoutStart.getDate() + 2); // 48 hour window for late night logging
+
+  const workoutExerciseNames = workout.exercises.map(ex => ex.exerciseName);
+
+  const filteredPRs = allPRs.filter(pr => {
+    if (!workoutExerciseNames.includes(pr.exerciseName)) return false;
+    if (!pr.achievedAt) return true;
+    const achievedTime = new Date(pr.achievedAt).getTime();
+    return achievedTime >= workoutStart.getTime() && achievedTime < workoutEnd.getTime();
+  });
+  
+  // Deduplicate if multiple PRs exist for the same exercise in that window
+  const uniquePRs = {};
+  filteredPRs.forEach(pr => {
+    if (!uniquePRs[pr.exerciseName] || new Date(pr.achievedAt).getTime() > new Date(uniquePRs[pr.exerciseName].achievedAt).getTime()) {
+      uniquePRs[pr.exerciseName] = pr;
+    }
+  });
+  const finalPRs = Object.values(uniquePRs);
 
   res.status(200).json({
     aiSummary: workout.aiSummary || "Great job completing your workout!",
     tomorrowPlan: tomorrowPlan,
-    newPRs: newPRs,
+    newPRs: finalPRs,
+    originalTomorrowPlan: null, // (Not stored right now)
     workout: workout
   });
 });
