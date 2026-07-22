@@ -214,7 +214,7 @@ export function Dashboard({ workout, done, onStart, onViewSummary, onOpenCircle,
 
         {/* coach */}
         <div style={{ marginBottom: 14 }}>
-          <CoachCard>{w?.aiSummary || dietData?.dietLog?.dailyCoachTip || `Day ${computedDay} of your comeback. ${computedDay <= 3 ? "Ease in today — hit the planned weights, don't chase PRs yet." : "You're doing great, keep pushing!"}`}</CoachCard>
+          <CoachCard>{w?.aiSummary || `Day ${computedDay} of your comeback. ${computedDay <= 3 ? "Ease in today — hit the planned weights, don't chase PRs yet." : "You're doing great, keep pushing!"}`}</CoachCard>
         </div>
 
         {/* circle */}

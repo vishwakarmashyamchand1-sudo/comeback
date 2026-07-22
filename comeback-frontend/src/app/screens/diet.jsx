@@ -211,7 +211,13 @@ export function Diet({ onLogMeal }) {
         </div>
 
         <div style={{ marginBottom: 4 }}>
-          <CoachCard>{dietLog?.dailyCoachTip || "Log your first meal today to get a personalized nutrition tip from your coach!"}</CoachCard>
+          <CoachCard>
+            {dietLog?.dailyCoachTip || (
+              dietLog?.meals?.length > 0 
+                ? "Great job tracking your meals! Keep focusing on hitting your daily protein and hydration goals to fuel your comeback." 
+                : "Log your first meal today to get a personalized nutrition tip from your coach!"
+            )}
+          </CoachCard>
         </div>
       </div>
 
