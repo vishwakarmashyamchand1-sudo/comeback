@@ -944,6 +944,7 @@ export function ActiveWorkout({ workout, weeklyPlanSplit, weekStartDate, onBack,
   const { state } = useOnboarding();
   const w = workout || todayWorkout;
   const activeExercises = (w.exercises || []).map((e, i) => ({ ...e, originalIndex: i })).filter(e => !e.wasSkipped);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [idx, setIdx] = useState(() => {
     const firstPendingIdx = activeExercises.findIndex(e => {
@@ -1024,6 +1025,7 @@ export function ActiveWorkout({ workout, weeklyPlanSplit, weekStartDate, onBack,
   const last = idx === activeExercises.length - 1;
   const next = async () => { 
     setSkipReason('');
+    setIsSaving(true);
     
     // API Call to log the entire exercise
     if (w._id && state.token) {
@@ -1073,6 +1075,7 @@ export function ActiveWorkout({ workout, weeklyPlanSplit, weekStartDate, onBack,
       }
     }
 
+    setIsSaving(false);
     if (last) onBack(); else setIdx(i => i + 1); 
   };
   const nextEx = activeExercises[idx + 1];
@@ -1175,7 +1178,7 @@ export function ActiveWorkout({ workout, weeklyPlanSplit, weekStartDate, onBack,
               <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.06em', color: '#8A8A85' }}>Up next</div>
               <div style={{ fontSize: 13, fontWeight: 500, color: '#1A1A2E', marginTop: 2, textTransform: 'capitalize' }}>{nextEx.exerciseName || nextEx.name} · {nextEx.sets}×{nextEx.reps}</div>
             </div>
-            <span style={{ fontSize: 12, fontWeight: 500, color: '#1A1A2E', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }} onClick={() => onSwap(nextEx.muscleGroup || 'All')}><i className="ti ti-refresh" /> Swap</span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: '#1A1A2E', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }} onClick={() => onSwap(nextEx.originalIndex, nextEx.muscleGroup || 'All')}><i className="ti ti-refresh" /> Swap</span>
           </div>
         )}
       </div>
@@ -1184,10 +1187,10 @@ export function ActiveWorkout({ workout, weeklyPlanSplit, weekStartDate, onBack,
         <button 
           className="btn btn-primary" 
           onClick={next}
-          disabled={last ? false : !cur.some(s => s.done)}
-          style={{ opacity: (last || cur.some(s => s.done)) ? 1 : 0.5, pointerEvents: (last || cur.some(s => s.done)) ? 'auto' : 'none' }}
+          disabled={isSaving || (last ? false : !cur.some(s => s.done))}
+          style={{ opacity: (last || cur.some(s => s.done)) ? 1 : 0.5, pointerEvents: isSaving ? 'none' : (last || cur.some(s => s.done)) ? 'auto' : 'none' }}
         >
-          {last ? <>Done workout <i className="ti ti-flag-check btn-icon" /></> : <>Complete exercise <i className="ti ti-arrow-right btn-icon" /></>}
+          {isSaving ? <>Saving... <i className="ti ti-loader ti-spin btn-icon" /></> : last ? <>Done workout <i className="ti ti-flag-check btn-icon" /></> : <>Complete exercise <i className="ti ti-arrow-right btn-icon" /></>}
         </button>
       </div>
     </div>
