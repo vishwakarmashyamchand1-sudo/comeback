@@ -251,7 +251,7 @@ export default function AppShell() {
     refreshWorkout={() => fetchWorkoutByOffset(1, true)} 
     isModifyMode={true} 
   />;
-  if (top === 'active') overlay = <ActiveWorkout workout={workout} weekStartDate={weekStartDate} weeklyPlanSplit={weeklyPlanSplit} onBack={() => { fetchWorkoutByOffset(0, true); pop(); }} onFinish={() => replace('post')} onSwap={(muscle) => { setBrowserMuscle(muscle || 'All'); push('browser'); }} />;
+  if (top === 'active') overlay = <ActiveWorkout workout={workout} weekStartDate={weekStartDate} weeklyPlanSplit={weeklyPlanSplit} onBack={() => { fetchWorkoutByOffset(0, true); pop(); }} onFinish={() => replace('post')} onSwap={(index, muscle) => { setBrowserMuscle(muscle || 'All'); setSubstituteContext({ index }); push('browser'); }} />;
   if (top === 'post') overlay = <PostSession 
     workout={workout} 
     isCompleted={workoutDone || workout?.status === 'completed'}
