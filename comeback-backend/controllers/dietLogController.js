@@ -482,13 +482,17 @@ const getDietTip = asyncHandler(async (req, res) => {
     generatedDate.setUTCHours(0, 0, 0, 0);
 
     if (generatedDate.getTime() === today.getTime()) {
-      // Tip was already generated today. Return the cached tip and DO NOT call Claude!
-      return res.status(200).json({
-        tip: dietLog.dailyCoachTip,
-        generatedAt: dietLog.dailyTipGeneratedAt
-      });
+      // Bypass cache if it's the old hardcoded fallback
+      if (dietLog.dailyCoachTip !== "Stay consistent with your meals! Keep tracking your progress to reach your goals.") {
+        // Tip was already generated today. Return the cached tip and DO NOT call Claude!
+        return res.status(200).json({
+          tip: dietLog.dailyCoachTip,
+          generatedAt: dietLog.dailyTipGeneratedAt
+        });
+      }
     }
   }
+
 
   // Step 94: Calculate last 3 days protein average
   const threeDaysAgo = new Date(today);
@@ -515,8 +519,16 @@ const getDietTip = asyncHandler(async (req, res) => {
 
   // Step 95: Call API to generate a new tip
   const { generateDietTip } = require('../services/planGenerationService');
-  // const newTip = await generateDietTip(dietLog.meals || [], runningTotals, avgProtein);
-  const newTip = "Stay consistent with your meals! Keep tracking your progress to reach your goals.";
+  let newTip = "Stay consistent with your meals! Keep tracking your progress to reach your goals.";
+  
+  try {
+    if (dietLog.meals && dietLog.meals.length > 0) {
+      newTip = await generateDietTip(dietLog.meals, runningTotals, avgProtein);
+    }
+  } catch (err) {
+    console.error("AI diet tip generation failed:", err);
+  }
+  
   const generationTime = new Date();
 
   dietLog.dailyCoachTip = newTip;
